@@ -77,3 +77,14 @@ When a condition's target is absent from `effectiveValues` (never answered, or h
 - **Richer PDF:** running headers and "Page X of Y" in Safari require JavaScript-injected per-page divs and `ResizeObserver`, which is a significant spike. Skipped per K2.
 - **Accessibility:** labels and `aria-required` are wired, but keyboard navigation of tiles/drag-and-drop and error announcement via `aria-live` need deeper testing with a screen reader.
 - **Performance:** engine re-runs on every keystroke. At 50 fields with dense conditions this is fine; at 200+ fields a debounce or a more granular reactivity model (Zustand selectors) would help.
+
+## Planning artifacts
+
+The architectural decisions section above is a 7-item distillation. The full planning trail lives in [`docs/planning/`](docs/planning/). Highlights worth opening:
+
+- [**TYPES_PROPOSAL.md**](docs/planning/TYPES_PROPOSAL.md) — signed-off type model, registry contract, and engine signatures. Source of truth for everything in `src/types/`, `src/engine/`, and `src/registry/`.
+- [**decision-log.md**](docs/planning/decision-log.md) — every architectural decision with options-considered, chosen path, and reasoning (~40 KB). The long-form version of the *Architectural decisions* section above, including the "evolution" notes that show how decisions changed under review.
+- [**E2E_SCENARIOS.md**](docs/planning/E2E_SCENARIOS.md) — 48 hand-verified scenarios (S1–S41 + M1–M7) serving as the spec for both manual smoke and Playwright. Each has stable ID, preconditions, steps, and explicit expected outcomes; the four bugs caught during manual testing (S16 cascade delete, S17 condition-value editor, S41 preview-with-unsaved, plus a PDF rendering bug) are documented as scenarios with their root-cause analysis.
+- [**assignment.pdf**](docs/planning/assignment.pdf) — the original take-home brief, kept alongside the planning docs for cross-reference.
+
+The directory also contains the AI prompts used at each phase: [`CLAUDE_CODE_STARTER_PROMPT.md`](docs/planning/CLAUDE_CODE_STARTER_PROMPT.md) and [`CODEX_REVIEW_PROMPT.md`](docs/planning/CODEX_REVIEW_PROMPT.md) (independent plan reviews), [`ImplementationPrompt.md`](docs/planning/ImplementationPrompt.md) (initial build), [`CompletionPrompt.md`](docs/planning/CompletionPrompt.md) (gap-fill), and [`PlaywrightPlan.md`](docs/planning/PlaywrightPlan.md) (E2E). These exist as evidence of the multi-model orchestration documented in [AI_USAGE_LOG.md](AI_USAGE_LOG.md) — entries 3, 5, and 6 reference them directly.
