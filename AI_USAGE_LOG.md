@@ -145,3 +145,96 @@ What I'd do differently: write the AI usage log in real-time alongside the plan,
 ## Implementation entries
 
 *Will be added as the build progresses. Format per entry: Phase / Title / Prompt summary / Output summary / Verified / Used as-is, Modified, or Rejected (with reason).*
+
+---
+
+## Entry 7 — 22-minute build handoff: trust but verify
+
+**Phase:** Implementation kickoff (Phases 1–12 of `ImplementationPrompt.md`)
+**Tool:** Claude Code
+
+**Prompt:** Pasted `ImplementationPrompt.md` into a fresh session and walked away. Came back to a "✻ Crunched for 22m 33s" message claiming all 12 phases complete, with a `PROGRESS.md` and a five-point handoff list.
+
+**Output summary:** The session shipped real engine + storage + 9 field modules + Builder + Fill + InstanceView + PDF stylesheet + CSV writer in 22 minutes. The engine layer was genuinely well-tested (115 unit tests passing, including the cascade test and the B2-dropped test).
+
+**Verified:** Ran `find src -type f \( -name "*.ts" -o -name "*.tsx" \) | wc -l`, `npm test -- --run`, `npm run typecheck`, `npm run build`, plus `grep -rn "it.skip\|it.todo\|TODO\|FIXME"`. Actual numbers: 42 production files, 115 unique tests (reported as 230 because a `tsc -b` build-config leak was emitting `.js` files into `src/` and vitest was picking them up), no skipped tests. UI was implemented but had zero tests. The headline P1 instance-lifecycle test the handoff summary claimed existed — `grep` for it: not there.
+
+**Used:** The engine + UI implementation as-is (it works). Wrote a follow-up `CompletionPrompt.md` (G0–G10) to fill the gaps — fix the build leak, add the P1 test, add ~110 missing tests across field validators, renderers, CSV, PDF, Builder UI, Fill UI, TemplatesList, plus an audit of 7 polish features. Second pass landed in 19 minutes with 277 tests passing.
+
+**Reflection:** "Crunched for 22m" looks like a victory; without verification it's a confident-sounding skip. The verification commands took 30 seconds and surfaced the gap. Treating completion claims as untrusted-by-default is the right discipline when the agent's own summary is the only evidence.
+
+---
+
+## Entry 8 — PDF empty bug: my first diagnosis was wrong
+
+**Phase:** Manual smoke testing (S5 from `E2E_SCENARIOS.md`)
+**Tool:** Claude Code (consulting)
+
+**Prompt:** Just finished verifying gap-fill completion. Built a form, filled it, opened the instance view, hit Cmd+P. Print preview was blank. Reported: *"PDF is empty."*
+
+**Output summary:** Claude's first hypothesis was a CSS specificity issue — the print region had `style={{ display: 'none' }}` inline; the print stylesheet had `#print-region { display: block !important }`; Claude reasoned that inline styles beat external CSS even with `!important`. That diagnosis was wrong. The real cause: the print-region was nested inside `<div id="root">`, and the print rule `body > *:not(#print-region) { display: none }` hides `#root` directly. Once `#root` is `display: none`, every descendant — including the print region — is removed from the layout tree, regardless of the descendant's own `display: block !important`. Fixed by rendering the print-region via `createPortal(printRegion, document.body)` so it's a *sibling* of `#root`, not a descendant.
+
+**Verified:** Manually triggered Cmd+P after the fix — print preview rendered the form correctly. Updated the InstanceView unit tests to query `document.body.querySelector('#print-region')` instead of `container.querySelector` (portal escapes the rendered tree). All 7 InstanceView tests pass; full suite still green.
+
+**Used:** Modified — accepted the portal fix; rejected the initial CSS-specificity diagnosis after Claude walked it back.
+
+**Reflection — this is the implementation-phase "plausibly wrong" moment.** The first diagnosis was confident, technical-sounding, and used real CSS specificity terminology. It was also wrong, and would have led me to chase `!important` chains that wouldn't have fixed anything. Lesson: when a technical explanation doesn't quite fit the symptom (the CSS rule already had `!important`; specificity wasn't actually being contested), don't accept the explanation — go look at the actual DOM. Also worth noting: my InstanceView unit test was passing the whole time because it asserted the print-region's existence in the rendered tree, which it had. The unit test couldn't catch the rendering bug because jsdom doesn't run `@media print`. Real-browser verification was the only path to catching this.
+
+---
+
+## Entry 9 — Cascade delete bug: structural argument, broken implementation
+
+**Phase:** Manual smoke testing
+**Tool:** Claude Code (consulting)
+
+**Prompt:** During manual testing I asked: *"If we delete the templates, what happens to their instances?"* Claude answered confidently — single-key localStorage, decision-log D3, "no orphans possible." Then I tried it: built two templates, filled responses for both, deleted one. The deleted template's instances stayed in the DevTools dock's localStorage view. Reported: *"instances are still there even if we delete the templates."*
+
+**Output summary:** Investigated `src/stores/templates.ts`. `deleteTemplate(id)` was destructuring the template out of the templates map and calling `save({ templates: next, instances })` *with the original instances object unchanged*. The cascade-delete confirm dialog already told users "X filled responses will also be deleted" (per D3) but the actual delete handler didn't honor it. Fixed by filtering `instances` to drop entries where `instance.templateId === id` before saving. Added 5 unit tests in a new `src/stores/templates.test.ts`: cascade removes orphans, preserves instances of other templates, persisted state has no orphans, zero-instance delete is a no-op for instances, non-existent id leaves state unchanged.
+
+**Verified:** All 5 tests passed. Re-ran the manual scenario: deleted T1 with 2 responses; T1 gone, its 2 responses gone, T2 and its 1 response preserved. Documented as scenario S16 in `E2E_SCENARIOS.md`.
+
+**Used:** Modified — Claude's earlier "no orphans possible" answer was a structural-shape claim (single-key storage = atomic write); the actual implementation had a code path that violated the contract. Both can be true at the same time.
+
+**Reflection:** "Structurally impossible" is a claim about the shape of data, not about whether the code uses the shape correctly. Storage being a single key meant orphans couldn't survive across sessions if writes were always consistent — but the bug was that writes weren't consistent. Lesson: when I (or an AI) argue *"X is structurally guaranteed by the design,"* verify the implementation actually reaches that guarantee. The decision log was correct. The code wasn't.
+
+---
+
+## Entry 10 — Spec compliance gap: instance count missing from template cards
+
+**Phase:** UX polish
+**Tool:** Claude Code
+
+**Prompt:** While adding save-feedback toasts, I asked: *"in the forms list, can we show how many instances are there?"*
+
+**Output summary:** Claude pointed out — correctly — that this wasn't a polish question. The assignment spec literally says: *"Each template card shows: title, number of fields, number of filled instances, last modified date."* The previous Claude Code session that built TemplatesList had implemented title + field count + modified date but skipped the instance count. The instance count *was* being computed (it's used in the cascade-delete confirm dialog) but never rendered on the card itself. Direct spec violation. Fixed by computing `instanceCountByTemplate` once per render via single-pass map reduction (O(instances), not O(templates × instances)) and surfacing as `{N} fields · {M} responses · Modified {date}` with singular/plural handling. Added `data-testid="template-card-${id}"` and `data-testid="template-meta-${id}"` for E2E.
+
+**Verified:** `npm run typecheck` clean. `npm test -- --run` 340 passing, no regressions. Manual: cards now show response count alongside field count.
+
+**Used:** As-is. Mechanical fix once the gap was identified.
+
+**Reflection:** I'd been operating from `decision-log.md` and `TYPES_PROPOSAL.md` without re-checking the assignment spec during the build. The decision log is detailed and self-consistent, which makes it easy to forget the spec is the actual contract. Lesson: include "spec re-read" as part of every UI phase checkpoint. The decision log doesn't mention card metadata at all — it's spec-only territory, and I'd been operating from the decision log alone for ~2 days.
+
+---
+
+## Entry 11 — Reflection: retroactive logging + verification cadence
+
+**Phase:** End of implementation
+**Tool:** N/A
+
+Implementation entries 7–10 were reconstructed at the end of the build phase rather than captured live, despite the `AI_LOG_DISCIPLINE_FOR_CLAUDE_CODE.md` rule that said *"capture live, not retroactive."* I'm noting this honestly because the alternative — pretending live capture happened — would be worse. Next time I'd enforce live capture by adding a "log this phase if anything significant happened" prompt at every checkpoint, and treat the log as a build artifact rather than an end-of-day chore.
+
+The single most valuable habit during the build was the verification cadence I added: after every "I'm done" claim from Claude Code, run `find` for file count, `wc -l` for line counts on suspicious files, `grep` for `it.skip` / `TODO` / `FIXME`, `npm test -- --run`, `npm run typecheck`, `npm run build`. That cadence surfaced four real issues:
+
+- **22-minute build handoff** (Entry 7): claimed completion, was missing ~110 tests + the headline P1 instance-lifecycle test
+- **PDF empty bug** (Entry 8): unit tests passed, manual Cmd+P revealed it
+- **Cascade delete bug** (Entry 9): "no orphans possible" was technically true at the storage layer but false at the code path
+- **Instance count spec gap** (Entry 10): the decision log was followed; the spec wasn't re-checked
+
+Each would have shipped silently if I'd trusted the agent's summary. None were catastrophic individually; collectively they would have meaningfully degraded the submission.
+
+What I'd carry forward:
+
+1. Verification commands belong in the prompt as mandatory phase-checkpoint steps, not optional.
+2. Manual smoke (~10 min through key user flows) catches what unit tests can't — layout, rendering, real-browser-only behavior. Run before any "done."
+3. The spec is the contract. The decision log is the implementation guide. Re-read both at audit checkpoints.
+4. Multi-model review during *implementation* (not just planning) would have helped. I did this for planning (Cowork → Claude Code → Codex → Codex round 2) but not during the build. Next time, schedule a Codex pass at the end of each major phase.
