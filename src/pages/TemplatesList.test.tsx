@@ -7,8 +7,13 @@ import type { Template } from '@/types/template';
 vi.mock('@/stores/templates', () => ({
   useTemplatesStore: vi.fn(),
 }));
+vi.mock('@/stores/instances', () => ({
+  useInstancesStore: vi.fn(),
+}));
 
 import { useTemplatesStore } from '@/stores/templates';
+import { useInstancesStore } from '@/stores/instances';
+import type { Instance } from '@/types/template';
 
 const mockTemplate: Template = {
   id: 't1',
@@ -35,6 +40,10 @@ function renderList() {
   );
 }
 
+function mockInstances(instances: Record<string, Instance> = {}) {
+  (vi.mocked(useInstancesStore)).mockReturnValue({ instances, loadFromStorage: vi.fn(), addInstance: vi.fn(), templates: {} });
+}
+
 beforeEach(() => {
   (vi.mocked(useTemplatesStore)).mockReturnValue({
     templates: { t1: mockTemplate },
@@ -42,6 +51,7 @@ beforeEach(() => {
     loadFromStorage: vi.fn(),
     deleteTemplate: vi.fn(),
   });
+  mockInstances();
 });
 
 describe('TemplatesList', () => {
@@ -107,6 +117,59 @@ describe('TemplatesList', () => {
     renderList();
     fireEvent.click(screen.getByRole('button', { name: /delete/i }));
     expect(deleteTemplate).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('TemplatesList — delete confirmation instance count', () => {
+  function makeInstance(id: string, templateId: string): Instance {
+    return {
+      id,
+      templateId,
+      templateSnapshot: mockTemplate,
+      values: {},
+      visibility: {},
+      submittedAt: '2026-05-03T00:00:00Z',
+    };
+  }
+
+  it('0 instances: confirm message contains template title and no response count', () => {
+    const confirmFn = vi.fn((_msg: string) => false);
+    vi.stubGlobal('confirm', confirmFn);
+    mockInstances({});
+    renderList();
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    const msg = confirmFn.mock.calls[0]![0];
+    expect(msg).toContain('My Survey');
+    expect(msg).toContain('This cannot be undone');
+    expect(msg).not.toMatch(/\d+ filled response/);
+    vi.unstubAllGlobals();
+  });
+
+  it('1 instance: confirm message contains "1 filled response" (singular)', () => {
+    const confirmFn = vi.fn((_msg: string) => false);
+    vi.stubGlobal('confirm', confirmFn);
+    mockInstances({ i1: makeInstance('i1', 't1') });
+    renderList();
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    const msg = confirmFn.mock.calls[0]![0];
+    expect(msg).toContain('1 filled response will also be deleted');
+    expect(msg).not.toContain('responses');
+    vi.unstubAllGlobals();
+  });
+
+  it('5 instances: confirm message contains "5 filled responses" (plural)', () => {
+    const confirmFn = vi.fn((_msg: string) => false);
+    vi.stubGlobal('confirm', confirmFn);
+    const instances: Record<string, Instance> = {};
+    for (let n = 1; n <= 5; n++) {
+      instances[`i${n}`] = makeInstance(`i${n}`, 't1');
+    }
+    mockInstances(instances);
+    renderList();
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+    const msg = confirmFn.mock.calls[0]![0];
+    expect(msg).toContain('5 filled responses will also be deleted');
     vi.unstubAllGlobals();
   });
 });

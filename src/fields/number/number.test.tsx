@@ -88,6 +88,22 @@ describe('number renderer', () => {
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '' } });
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
+
+  it('no aria-describedby when errors is empty', () => {
+    render(<Renderer field={baseField} value={0} onChange={vi.fn()} isRequired={false} errors={[]} />);
+    expect(screen.getByRole('spinbutton')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('aria-describedby links to error container when errors present', () => {
+    const { container } = render(
+      <Renderer field={baseField} value={undefined} onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    expect(screen.getByRole('spinbutton')).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
 });
 
 // ── G3: ConfigEditor ───────────────────────────────────────────────────────

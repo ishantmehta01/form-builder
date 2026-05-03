@@ -25,6 +25,7 @@ function FileRenderer({ field, value, onChange, isRequired, errors, disabled }: 
     onChange(next.length > 0 ? next : undefined);
   };
 
+  const errorId = `field-${field.id}-error`;
   return (
     <div className="flex flex-col gap-1">
       <label className="font-medium text-sm text-gray-700">
@@ -43,6 +44,7 @@ function FileRenderer({ field, value, onChange, isRequired, errors, disabled }: 
           id={`file-input-${field.id}`}
           aria-required={isRequired}
           aria-invalid={errors.length > 0}
+          aria-describedby={errors.length > 0 ? errorId : undefined}
         />
         <label htmlFor={`file-input-${field.id}`} className="cursor-pointer text-blue-600 hover:underline">
           Click to upload
@@ -63,9 +65,13 @@ function FileRenderer({ field, value, onChange, isRequired, errors, disabled }: 
           ))}
         </ul>
       )}
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

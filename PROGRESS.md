@@ -95,13 +95,13 @@ Note on delete confirmation: current message is `Delete "${title}"? This cannot 
 | 4. Date prefillToday | ✅ Already implemented via useEffect in DateRenderer |
 | 5a. Labels on inputs | ✅ All renderers show field label above input |
 | 5b. aria-required="true" | ✅ All renderers set `aria-required={isRequired}` |
-| 5c. aria-describedby for errors | ⚠️ NOT implemented — inputs don't link to error elements |
+| 5c. aria-describedby for errors | ✅ RESOLVED — see entry at 11:26 |
 | 5d. Tile keyboard nav | ✅ Tiles use `<button>` elements (native keyboard support) |
 | 5e. focus-visible styles | ⚠️ Browser default only — no explicit focus-visible Tailwind classes |
 | 6. AffixedInput shared | ✅ Both text and number renderers use `<AffixedInput>` |
 | 7. Number config conditional UI | ✅ decimalPlaces select + min/max/prefix/suffix inputs all present |
 
-⚠️ BLOCKER: `aria-describedby` on inputs — inputs do not link to their error `<p>` elements. Adding this would require id attributes on error containers across all 7 renderers. Deferred due to time constraints. See README "Accessibility" bullet in "What I'd improve with more time".
+✅ RESOLVED (11:26): `aria-describedby` wired on all 7 renderers — see entry at 11:26.
 
 ## 2026-05-03 10:56 — Phase G10: README audit
 README already existed and was comprehensive. Verified all required sections present:

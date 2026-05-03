@@ -5,6 +5,7 @@ import { setOpt } from '@/lib/utils';
 
 function TextareaRenderer({ field, value, onChange, isRequired, errors, disabled }: Parameters<FieldTypeModule<TextareaField>['renderer']>[0]) {
   const str = typeof value === 'string' ? value : '';
+  const errorId = `field-${field.id}-error`;
   return (
     <div className="flex flex-col gap-1">
       <label className="font-medium text-sm text-gray-700">
@@ -20,10 +21,15 @@ function TextareaRenderer({ field, value, onChange, isRequired, errors, disabled
         disabled={disabled}
         aria-required={isRequired}
         aria-invalid={errors.length > 0}
+        aria-describedby={errors.length > 0 ? errorId : undefined}
       />
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

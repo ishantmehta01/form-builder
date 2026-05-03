@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTemplatesStore } from '@/stores/templates';
+import { useInstancesStore } from '@/stores/instances';
 
 export function TemplatesList() {
   const { templates, invalidTemplateIds, loadFromStorage, deleteTemplate } = useTemplatesStore();
+  const { instances } = useInstancesStore();
 
   useEffect(() => {
     loadFromStorage();
@@ -70,7 +72,14 @@ export function TemplatesList() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm(`Delete "${t.title}"? This cannot be undone.`)) {
+                      const instanceCount = Object.values(instances).filter((i) => i.templateId === t.id).length;
+                      const responsePart = instanceCount === 0
+                        ? ''
+                        : instanceCount === 1
+                          ? ' 1 filled response will also be deleted.'
+                          : ` ${instanceCount} filled responses will also be deleted.`;
+                      const message = `Delete template '${t.title}'?${responsePart} This cannot be undone.`;
+                      if (window.confirm(message)) {
                         deleteTemplate(t.id);
                       }
                     }}

@@ -97,6 +97,40 @@ describe('single_select renderer — required', () => {
   });
 });
 
+describe('single_select renderer — aria-describedby', () => {
+  it('dropdown: no aria-describedby when errors empty', () => {
+    render(<Renderer field={makeField('dropdown')} value="" onChange={vi.fn()} isRequired={false} errors={[]} />);
+    expect(screen.getByRole('combobox')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('dropdown: aria-describedby links to error container when errors present', () => {
+    const { container } = render(
+      <Renderer field={makeField('dropdown')} value="" onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
+
+  it('radio: no aria-describedby on group when errors empty', () => {
+    render(<Renderer field={makeField('radio')} value="" onChange={vi.fn()} isRequired={false} errors={[]} />);
+    expect(screen.getByRole('radiogroup')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('radio: aria-describedby on radiogroup when errors present', () => {
+    const { container } = render(
+      <Renderer field={makeField('radio')} value="" onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
+});
+
 // ── G3: ConfigEditor ───────────────────────────────────────────────────────
 
 describe('single_select configEditor', () => {

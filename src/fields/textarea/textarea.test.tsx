@@ -75,6 +75,22 @@ describe('textarea renderer', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'notes' } });
     expect(onChange).toHaveBeenCalledWith('notes');
   });
+
+  it('no aria-describedby when errors is empty', () => {
+    render(<Renderer field={baseField} value="" onChange={vi.fn()} isRequired={false} errors={[]} />);
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('aria-describedby links to error container when errors present', () => {
+    const { container } = render(
+      <Renderer field={baseField} value="" onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
 });
 
 // ── G3: ConfigEditor ───────────────────────────────────────────────────────

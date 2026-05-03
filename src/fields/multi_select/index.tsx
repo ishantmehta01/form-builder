@@ -14,13 +14,18 @@ function MultiSelectRenderer({ field, value, onChange, isRequired, errors, disab
     onChange(next.length > 0 ? next : undefined);
   };
 
+  const errorId = `field-${field.id}-error`;
   return (
     <div className="flex flex-col gap-1">
       <label className="font-medium text-sm text-gray-700">
         {field.label}
         {isRequired && <span className="text-red-500 ml-1" aria-hidden="true">*</span>}
       </label>
-      <div className="flex flex-col gap-1">
+      <div
+        className="flex flex-col gap-1"
+        role="group"
+        aria-describedby={errors.length > 0 ? errorId : undefined}
+      >
         {options.map((opt) => (
           <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer">
             <input
@@ -33,9 +38,13 @@ function MultiSelectRenderer({ field, value, onChange, isRequired, errors, disab
           </label>
         ))}
       </div>
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

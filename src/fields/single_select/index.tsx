@@ -5,6 +5,7 @@ import type { ValidationError } from '@/types/condition';
 function SingleSelectRenderer({ field, value, onChange, isRequired, errors, disabled }: Parameters<FieldTypeModule<SingleSelectField>['renderer']>[0]) {
   const selected = typeof value === 'string' ? value : '';
   const { options, displayType } = field.config;
+  const errorId = `field-${field.id}-error`;
 
   return (
     <div className="flex flex-col gap-1">
@@ -21,6 +22,7 @@ function SingleSelectRenderer({ field, value, onChange, isRequired, errors, disa
           disabled={disabled}
           aria-required={isRequired}
           aria-invalid={errors.length > 0}
+          aria-describedby={errors.length > 0 ? errorId : undefined}
         >
           <option value="">— Select —</option>
           {options.map((opt) => (
@@ -28,7 +30,11 @@ function SingleSelectRenderer({ field, value, onChange, isRequired, errors, disa
           ))}
         </select>
       ) : displayType === 'tiles' ? (
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-describedby={errors.length > 0 ? errorId : undefined}
+        >
           {options.map((opt) => (
             <button
               key={opt.id}
@@ -44,7 +50,11 @@ function SingleSelectRenderer({ field, value, onChange, isRequired, errors, disa
         </div>
       ) : (
         // radio
-        <div className="flex flex-col gap-1">
+        <div
+          className="flex flex-col gap-1"
+          role="radiogroup"
+          aria-describedby={errors.length > 0 ? errorId : undefined}
+        >
           {options.map((opt) => (
             <label key={opt.id} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -62,9 +72,13 @@ function SingleSelectRenderer({ field, value, onChange, isRequired, errors, disa
         </div>
       )}
 
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

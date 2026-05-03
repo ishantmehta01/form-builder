@@ -6,6 +6,7 @@ import { setOpt } from '@/lib/utils';
 
 function NumberRenderer({ field, value, onChange, isRequired, errors, disabled }: Parameters<FieldTypeModule<NumberField>['renderer']>[0]) {
   const num = typeof value === 'number' && Number.isFinite(value) ? value : '';
+  const errorId = `field-${field.id}-error`;
   return (
     <div className="flex flex-col gap-1">
       <label className="font-medium text-sm text-gray-700">
@@ -27,10 +28,15 @@ function NumberRenderer({ field, value, onChange, isRequired, errors, disabled }
         disabled={disabled}
         aria-required={isRequired}
         aria-invalid={errors.length > 0}
+        aria-describedby={errors.length > 0 ? errorId : undefined}
       />
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

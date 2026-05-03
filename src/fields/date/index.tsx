@@ -18,6 +18,7 @@ function DateRenderer({ field, value, onChange, isRequired, errors, disabled }: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const errorId = `field-${field.id}-error`;
   return (
     <div className="flex flex-col gap-1">
       <label className="font-medium text-sm text-gray-700">
@@ -34,10 +35,15 @@ function DateRenderer({ field, value, onChange, isRequired, errors, disabled }: 
         disabled={disabled}
         aria-required={isRequired}
         aria-invalid={errors.length > 0}
+        aria-describedby={errors.length > 0 ? errorId : undefined}
       />
-      {errors.map((e) => (
-        <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
-      ))}
+      {errors.length > 0 && (
+        <div id={errorId} role="alert" data-testid={`field-error-${field.id}`}>
+          {errors.map((e) => (
+            <p key={e.rule} className="text-red-600 text-xs">{e.message}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

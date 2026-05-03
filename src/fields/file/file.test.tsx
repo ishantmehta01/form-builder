@@ -86,6 +86,24 @@ describe('file renderer', () => {
     render(<Renderer field={baseField} value={[mockFile]} onChange={vi.fn()} isRequired={false} errors={[]} />);
     expect(screen.getByText(/report.pdf/)).toBeInTheDocument();
   });
+
+  it('no aria-describedby on file input when errors empty', () => {
+    const { container } = render(<Renderer field={baseField} value={[]} onChange={vi.fn()} isRequired={false} errors={[]} />);
+    const input = container.querySelector('input[type="file"]')!;
+    expect(input).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('aria-describedby on file input links to error container when errors present', () => {
+    const { container } = render(
+      <Renderer field={baseField} value={[]} onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    const input = container.querySelector('input[type="file"]')!;
+    expect(input).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
 });
 
 // ── G3: ConfigEditor ───────────────────────────────────────────────────────

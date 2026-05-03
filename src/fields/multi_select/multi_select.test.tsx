@@ -80,6 +80,22 @@ describe('multi_select renderer', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Red' }));
     expect(onChange).toHaveBeenCalledWith(undefined); // empty → undefined
   });
+
+  it('no aria-describedby on group when errors empty', () => {
+    render(<Renderer field={baseField} value={[]} onChange={vi.fn()} isRequired={false} errors={[]} />);
+    expect(screen.getByRole('group')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('aria-describedby on group links to error container when errors present', () => {
+    const { container } = render(
+      <Renderer field={baseField} value={[]} onChange={vi.fn()} isRequired={false}
+        errors={[{ rule: 'required', message: 'Required' }]}
+      />
+    );
+    const errorId = 'field-f1-error';
+    expect(screen.getByRole('group')).toHaveAttribute('aria-describedby', errorId);
+    expect(container.querySelector(`#${errorId}`)).toHaveAttribute('role', 'alert');
+  });
 });
 
 // ── G3: ConfigEditor ───────────────────────────────────────────────────────
