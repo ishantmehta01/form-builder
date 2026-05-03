@@ -54,7 +54,7 @@ export function TemplatesList() {
                     Modified {new Date(t.modifiedAt).toLocaleDateString()}
                   </div>
                   {isInvalid && (
-                    <div className="text-xs text-red-600 mt-1">
+                    <div className="text-xs text-red-600 mt-1" data-testid={`quarantine-badge-${t.id}`}>
                       ⚠ Invalid conditional logic — open in builder to fix. New responses disabled.
                     </div>
                   )}

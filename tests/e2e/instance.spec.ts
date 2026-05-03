@@ -225,6 +225,72 @@ test("S12 — Hidden field excluded from instance view and PDF", async ({ page }
   expect(printContent).not.toContain("Secret Info");
 });
 
+// S28 — Edit template after instances exist; old instances render against snapshot (D4, Tier 1)
+test("S28 — Old instance renders against its snapshot label, not the live template", async ({ page }) => {
+  const templateId = "tpl-snapshot-001";
+  const fieldId = "field-email-snap-001";
+  const phoneId = "field-phone-snap-001";
+  const inst1Id = "inst-snap-old-001";
+  const inst2Id = "inst-snap-new-001";
+
+  await page.evaluate(
+    ({ templateId, fieldId, phoneId, inst1Id, inst2Id }) => {
+      // Live template has "Contact" + "Phone" (schema after editing)
+      const liveTemplate = {
+        id: templateId, title: "Survey",
+        fields: [
+          { id: fieldId, type: "text", label: "Contact", conditions: [], conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {} },
+          { id: phoneId, type: "text", label: "Phone", conditions: [], conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {} },
+        ],
+        createdAt: "2026-01-01T00:00:00.000Z", modifiedAt: "2026-01-02T00:00:00.000Z",
+      };
+      // I1: submitted before edit — snapshot has original "Email" label, no Phone field
+      const snap1 = {
+        id: templateId, title: "Survey",
+        fields: [{ id: fieldId, type: "text", label: "Email", conditions: [], conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {} }],
+        createdAt: "2026-01-01T00:00:00.000Z", modifiedAt: "2026-01-01T00:00:00.000Z",
+      };
+      // I2: submitted after edit — snapshot matches live template
+      const snap2 = { ...liveTemplate };
+
+      const inst1 = {
+        id: inst1Id, templateId,
+        templateSnapshot: snap1,
+        values: { [fieldId]: "alice@example.com" },
+        visibility: { [fieldId]: true },
+        submittedAt: "2026-01-01T12:00:00.000Z",
+      };
+      const inst2 = {
+        id: inst2Id, templateId,
+        templateSnapshot: snap2,
+        values: { [fieldId]: "bob@example.com", [phoneId]: "555-1234" },
+        visibility: { [fieldId]: true, [phoneId]: true },
+        submittedAt: "2026-01-02T12:00:00.000Z",
+      };
+      localStorage.setItem("formBuilder", JSON.stringify({
+        version: 1,
+        templates: { [templateId]: liveTemplate },
+        instances: { [inst1Id]: inst1, [inst2Id]: inst2 },
+      }));
+    },
+    { templateId, fieldId, phoneId, inst1Id, inst2Id },
+  );
+
+  // I1: shows old "Email" label from its snapshot; no Phone field
+  await page.goto(`/instances/${inst1Id}`);
+  await page.waitForSelector('[data-testid="instance-view"]', { timeout: 5_000 });
+  await expect(page.locator('[data-testid="instance-view"]')).toContainText("Email");
+  await expect(page.locator('[data-testid="instance-view"]')).not.toContainText("Contact");
+  await expect(page.locator(`[data-testid="instance-field-${phoneId}"]`)).not.toBeAttached();
+
+  // I2: shows updated "Contact" + "Phone" labels from its snapshot
+  await page.goto(`/instances/${inst2Id}`);
+  await page.waitForSelector('[data-testid="instance-view"]', { timeout: 5_000 });
+  await expect(page.locator('[data-testid="instance-view"]')).toContainText("Contact");
+  await expect(page.locator('[data-testid="instance-view"]')).not.toContainText("Email");
+  await expect(page.locator(`[data-testid="instance-field-${phoneId}"]`)).toBeVisible();
+});
+
 // S13 — Visible-but-empty renders — in instance view and PDF (E2)
 test("S13 — Visible-but-empty renders — in instance view and PDF", async ({ page }) => {
   const templateId = "tpl-empty-001";

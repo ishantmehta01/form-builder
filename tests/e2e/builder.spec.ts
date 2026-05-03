@@ -287,3 +287,49 @@ test("S41 — Preview with unsaved changes prompts confirm dialog", async ({ pag
   await expect(page.locator(`[data-testid="field-${emailField.id}"]`)).toBeVisible();
   await expect(page.locator(`[data-testid="field-${phoneField.id}"]`)).toBeVisible();
 });
+
+// S34 — Quarantine badge shown for templates with cycles; New Response disabled (Tier 1)
+test("S34 — Cyclic template shows quarantine badge and disables New Response", async ({ page }) => {
+  const templateId = "tpl-cyclic-s34";
+  const aId = "field-a-s34";
+  const bId = "field-b-s34";
+
+  // Inject cyclic template: A shows if B=x, B shows if A=x
+  await page.evaluate(
+    ({ templateId, aId, bId }) => {
+      const template = {
+        id: templateId, title: "Cyclic Template",
+        fields: [
+          {
+            id: aId, type: "text", label: "A",
+            conditions: [{ targetId: bId, effect: "show", operator: "text_equals", value: "x" }],
+            conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {},
+          },
+          {
+            id: bId, type: "text", label: "B",
+            conditions: [{ targetId: aId, effect: "show", operator: "text_equals", value: "x" }],
+            conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {},
+          },
+        ],
+        createdAt: "2026-01-01T00:00:00.000Z", modifiedAt: "2026-01-01T00:00:00.000Z",
+      };
+      localStorage.setItem("formBuilder", JSON.stringify({ version: 1, templates: { [templateId]: template }, instances: {} }));
+    },
+    { templateId, aId, bId },
+  );
+
+  // Reload so the store runs load-time cycle detection
+  await page.reload();
+  await page.waitForSelector('[data-testid="templates-list"]', { timeout: 5_000 });
+
+  // Quarantine badge visible
+  await expect(page.locator(`[data-testid="quarantine-badge-${templateId}"]`)).toBeVisible();
+  const badgeText = await page.locator(`[data-testid="quarantine-badge-${templateId}"]`).textContent();
+  expect(badgeText).toMatch(/invalid conditional logic/i);
+
+  // New Response button absent for the quarantined template
+  await expect(page.locator(`[data-testid="new-response-${templateId}"]`)).not.toBeAttached();
+
+  // Edit button still present (user must fix the cycle)
+  await expect(page.locator(`[data-testid="open-template-${templateId}"]`)).toBeVisible();
+});

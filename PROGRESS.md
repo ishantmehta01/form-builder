@@ -276,3 +276,24 @@ Implemented first 10 E2E scenarios across 4 spec files. All 10 pass 3/3 consecut
 - **10 E2E tests passing** (S1–S10)
 - **343 unit tests passing** (unchanged)
 - Total: **353 tests**
+
+## 2026-05-03 17:09 — E2E Phase E4 (batch 2): Scenarios S11–S18 + S41 implemented
+
+Added 10 more E2E scenarios (10 test() blocks) across existing spec files. All 20 E2E tests pass 3/3 consecutive runs.
+
+### Scenarios added
+- **S11** (fill.spec.ts) — Hidden required field not validated (A2): hidden field absent from values + visibility=false confirmed via localStorage
+- **S12** (instance.spec.ts) — Hidden field excluded from instance view and PDF: `instance-field-${secretId}` absent, print-region text doesn't contain "Secret Info"
+- **S13** (instance.spec.ts) — Visible-but-empty renders `—` in instance view and PDF: `instance-empty-${fieldId}` shows dash, print region contains "—"
+- **S14** (fill.spec.ts) — Section Header heading levels: `getByRole('heading', { level: N })` asserts xl→h2, md→h3, xs→h4, form title→h1
+- **S15** (builder.spec.ts) — Single-source calc warning: builds via UI, checks checkbox, asserts `⚠ Single-source calc` text; adds second source, warning disappears
+- **S16** (builder.spec.ts) — Cascade delete: injects 2 templates + 3 instances, deletes T1 via UI confirm, verifies only I3 remains in localStorage
+- **S17a** (builder.spec.ts) — Condition value editor per operator: `select:has(option:has-text("Yes"))` asserts select dropdown (not text input) for select_equals
+- **S17b** (fill.spec.ts) — Single Select condition fires correctly in fill mode: option-ID stored correctly, live show/hide works
+- **S18** (fill.spec.ts) — 4-level cascade: A→B→C→D chain collapses all 4 together when A deselected
+- **S41** (builder.spec.ts) — Preview confirm dialog: Cancel preserves builder state; Save & preview navigates to fill with both fields visible
+
+### Test counts
+- **20 E2E tests passing** (S1–S18 + S41)
+- **343 unit tests passing** (unchanged)
+- Total: **363 tests**
