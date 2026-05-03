@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { useInstancesStore } from '@/stores/instances';
 import { registry } from '@/registry';
@@ -22,25 +23,31 @@ export function InstanceView() {
 
   return (
     <>
-      {/* Print region — only this shows when printing */}
-      <div id="print-region" style={{ display: 'none' }}>
-        <h1 style={{ fontSize: '18pt', fontWeight: 'bold', marginBottom: '8pt' }}>{templateSnapshot.title}</h1>
-        <p style={{ fontSize: '9pt', color: '#666', marginBottom: '16pt' }}>
-          Submitted: {new Date(instance.submittedAt).toLocaleString()}
-        </p>
-        {templateSnapshot.fields.map((field) => {
-          if (visibility[field.id] === false) return null;
-          const value = values[field.id];
-          return (
-            <div key={field.id}>
-              {registry[field.type].pdfRenderer(
-                field as never,
-                value ?? undefined,
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Print region — rendered via portal as a direct child of <body> so the
+          @media print rule `body > *:not(#print-region) { display: none }`
+          can hide #root without also hiding this region (descendant of #root
+          would inherit display:none even with !important on the region itself). */}
+      {createPortal(
+        <div id="print-region" style={{ display: 'none' }}>
+          <h1 style={{ fontSize: '18pt', fontWeight: 'bold', marginBottom: '8pt' }}>{templateSnapshot.title}</h1>
+          <p style={{ fontSize: '9pt', color: '#666', marginBottom: '16pt' }}>
+            Submitted: {new Date(instance.submittedAt).toLocaleString()}
+          </p>
+          {templateSnapshot.fields.map((field) => {
+            if (visibility[field.id] === false) return null;
+            const value = values[field.id];
+            return (
+              <div key={field.id}>
+                {registry[field.type].pdfRenderer(
+                  field as never,
+                  value ?? undefined,
+                )}
+              </div>
+            );
+          })}
+        </div>,
+        document.body,
+      )}
 
       {/* Screen region */}
       <div className="max-w-2xl mx-auto px-4 py-8">

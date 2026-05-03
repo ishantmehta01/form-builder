@@ -80,42 +80,46 @@ beforeEach(() => {
   });
 });
 
+// Print region is rendered via createPortal into document.body, so it lives
+// OUTSIDE the React Testing Library container. Query document.body directly.
+function getPrintRegion(): HTMLElement {
+  const el = document.body.querySelector<HTMLElement>('#print-region');
+  if (!el) throw new Error('print-region not found in document.body');
+  return el;
+}
+
 describe('InstanceView — print region', () => {
   it('print region exists in DOM', () => {
-    const { container } = renderWithRoute('inst1');
-    expect(container.querySelector('#print-region')).toBeTruthy();
+    renderWithRoute('inst1');
+    expect(document.body.querySelector('#print-region')).toBeTruthy();
   });
 
   it('form title appears in print region', () => {
-    const { container } = renderWithRoute('inst1');
-    const printRegion = container.querySelector('#print-region')!;
-    expect(printRegion.textContent).toContain('My Form');
+    renderWithRoute('inst1');
+    expect(getPrintRegion().textContent).toContain('My Form');
   });
 
   it('submission timestamp present in print region', () => {
-    const { container } = renderWithRoute('inst1');
-    const printRegion = container.querySelector('#print-region')!;
-    expect(printRegion.textContent).toContain('Submitted');
+    renderWithRoute('inst1');
+    expect(getPrintRegion().textContent).toContain('Submitted');
   });
 
   it('hidden field not rendered in print region', () => {
-    const { container } = renderWithRoute('inst1');
-    const printRegion = container.querySelector('#print-region')!;
-    expect(printRegion.textContent).not.toContain('Hidden Field');
+    renderWithRoute('inst1');
+    expect(getPrintRegion().textContent).not.toContain('Hidden Field');
   });
 
   it('visible-but-empty field renders — placeholder', () => {
-    const { container } = renderWithRoute('inst1');
-    const printRegion = container.querySelector('#print-region')!;
+    renderWithRoute('inst1');
+    const printRegion = getPrintRegion();
     // Empty Field is visible but has no value — should render with em dash
     expect(printRegion.textContent).toContain('Empty Field');
     expect(printRegion.textContent).toContain('—');
   });
 
   it('visible field with value renders the value', () => {
-    const { container } = renderWithRoute('inst1');
-    const printRegion = container.querySelector('#print-region')!;
-    expect(printRegion.textContent).toContain('Alice');
+    renderWithRoute('inst1');
+    expect(getPrintRegion().textContent).toContain('Alice');
   });
 });
 
