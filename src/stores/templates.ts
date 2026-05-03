@@ -47,9 +47,16 @@ export const useTemplatesStore = create<TemplatesState>((set, get) => ({
   },
 
   deleteTemplate: (id) => {
+    // Cascade delete per decision-log D3: removing a template also removes
+    // all of its filled instances. Without this filter, instances orphan and
+    // persist in localStorage with no parent template, violating D3 and
+    // surfacing as ghost rows in InstancesList.
     const { templates, instances } = get();
-    const { [id]: _, ...next } = templates;
-    set({ templates: next });
-    save({ templates: next, instances });
+    const { [id]: _removed, ...remainingTemplates } = templates;
+    const remainingInstances = Object.fromEntries(
+      Object.entries(instances).filter(([, instance]) => instance.templateId !== id),
+    );
+    set({ templates: remainingTemplates, instances: remainingInstances });
+    save({ templates: remainingTemplates, instances: remainingInstances });
   },
 }));
