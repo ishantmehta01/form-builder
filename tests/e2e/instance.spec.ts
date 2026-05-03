@@ -181,3 +181,91 @@ test("S5 — Download PDF (print region content)", async ({ page }) => {
   expect(printContent).toContain("30");
   expect(printContent).toContain("Submitted");
 });
+
+// S12 — Hidden field excluded from instance view and PDF
+test("S12 — Hidden field excluded from instance view and PDF", async ({ page }) => {
+  const templateId = "tpl-privacy-001";
+  const publicId = "field-public-001";
+  const secretId = "field-secret-001";
+  const instanceId = "inst-privacy-001";
+
+  await page.evaluate(
+    ({ tid, iid, publicId, secretId }) => {
+      const template = {
+        id: tid,
+        title: "Privacy Demo",
+        fields: [
+          { id: publicId, type: "text", label: "Public Info", conditions: [], conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {} },
+          { id: secretId, type: "text", label: "Secret Info", conditions: [], conditionLogic: "OR", defaultVisible: false, defaultRequired: false, config: {} },
+        ],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        modifiedAt: "2026-01-01T00:00:00.000Z",
+      };
+      const instance = {
+        id: iid, templateId: tid, templateSnapshot: template,
+        values: { [publicId]: "visible value" },
+        visibility: { [publicId]: true, [secretId]: false },
+        submittedAt: new Date().toISOString(),
+      };
+      localStorage.setItem("formBuilder", JSON.stringify({ version: 1, templates: { [tid]: template }, instances: { [iid]: instance } }));
+    },
+    { tid: templateId, iid: instanceId, publicId, secretId },
+  );
+
+  await page.goto(`/instances/${instanceId}`);
+  await page.waitForSelector('[data-testid="instance-view"]', { timeout: 5_000 });
+
+  // Public shown, Secret absent from instance view
+  await expect(page.locator(`[data-testid="instance-field-${publicId}"]`)).toBeVisible();
+  await expect(page.locator(`[data-testid="instance-field-${secretId}"]`)).not.toBeAttached();
+
+  // Print region: Public present, Secret label absent
+  const printContent = await page.locator("#print-region").textContent();
+  expect(printContent).toContain("Public Info");
+  expect(printContent).not.toContain("Secret Info");
+});
+
+// S13 — Visible-but-empty renders — in instance view and PDF (E2)
+test("S13 — Visible-but-empty renders — in instance view and PDF", async ({ page }) => {
+  const templateId = "tpl-empty-001";
+  const fieldId = "field-opt-001";
+  const instanceId = "inst-empty-001";
+
+  await page.evaluate(
+    ({ tid, iid, fieldId }) => {
+      const template = {
+        id: tid,
+        title: "Optional Demo",
+        fields: [
+          { id: fieldId, type: "text", label: "Optional Field", conditions: [], conditionLogic: "OR", defaultVisible: true, defaultRequired: false, config: {} },
+        ],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        modifiedAt: "2026-01-01T00:00:00.000Z",
+      };
+      const instance = {
+        id: iid, templateId: tid, templateSnapshot: template,
+        values: {}, // field not filled — intentionally absent
+        visibility: { [fieldId]: true },
+        submittedAt: new Date().toISOString(),
+      };
+      localStorage.setItem("formBuilder", JSON.stringify({ version: 1, templates: { [tid]: template }, instances: { [iid]: instance } }));
+    },
+    { tid: templateId, iid: instanceId, fieldId },
+  );
+
+  await page.goto(`/instances/${instanceId}`);
+  await page.waitForSelector('[data-testid="instance-view"]', { timeout: 5_000 });
+
+  // Visible-but-empty shows — placeholder (distinguishable from hidden)
+  const emptyEl = page.locator(`[data-testid="instance-empty-${fieldId}"]`);
+  await expect(emptyEl).toBeVisible();
+  await expect(emptyEl).toContainText("—");
+
+  // Label visible
+  await expect(page.locator('[data-testid="instance-view"]')).toContainText("Optional Field");
+
+  // Print region also shows — for the empty field
+  const printContent = await page.locator("#print-region").textContent();
+  expect(printContent).toContain("Optional Field");
+  expect(printContent).toContain("—");
+});
