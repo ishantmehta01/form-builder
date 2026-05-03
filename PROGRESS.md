@@ -192,3 +192,32 @@ Pattern applied:
 - `npm run typecheck` — ✅ clean (0 errors)
 - `npm test -- --run` — ✅ 296/296 passing
 - `npm run build` — ✅ clean (331 kB bundle)
+
+
+---
+
+## 2026-05-03 11:35 — Dev Tools menu (manual-test convenience + reviewer UX)
+
+Added bottom-right floating Dev Tools menu with Clear localStorage action. Confirm dialog with two-step destruction guard.
+
+### What was added
+
+- `src/components/DevToolsMenu.tsx` — fixed-position `⚙` button (bottom-right), popover menu, confirm dialog with Cancel/Confirm. On confirm: `localStorage.removeItem('formBuilder')` + `window.location.reload()`. Accessibility: `role="dialog"`, `aria-labelledby`, `aria-modal`, `aria-describedby` on Confirm button, Escape closes dialog.
+- `src/App.tsx` — `<DevToolsMenu />` mounted as sibling of `<Routes>` so it persists across all route changes.
+- `src/components/DevToolsMenu.test.tsx` — 8 tests covering: button renders, menu opens/closes, outside click closes, confirm dialog opens, Cancel no-ops, Confirm calls removeItem('formBuilder'), Confirm triggers reload, Escape closes dialog without clearing.
+
+### Useful for
+
+1. Manual E2E scenario walkthrough: click ⚙ → Clear localStorage between scenarios instead of opening DevTools
+2. Playwright `beforeEach`: drive reset via the real UI button path
+3. Take-home reviewer: wipe seed state cleanly without browser DevTools
+
+### Test status
+- **21 test files**
+- **304 tests, 304 passing, 0 failing** (was 296)
+- Added: 8 new tests in DevToolsMenu.test.tsx
+
+### Typecheck + build
+- `npm run typecheck` — ✅ clean
+- `npm test -- --run` — ✅ 304/304 passing
+- `npm run build` — ✅ clean (333 kB bundle)

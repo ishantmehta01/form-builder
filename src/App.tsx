@@ -4,6 +4,7 @@ import { Builder } from './pages/Builder';
 import { Fill } from './pages/Fill';
 import { InstancesList } from './pages/InstancesList';
 import { InstanceView } from './pages/InstanceView';
+import { DevToolsMenu } from './components/DevToolsMenu';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/templates/:templateId/instances" element={<InstancesList />} />
         <Route path="/instances/:instanceId" element={<InstanceView />} />
       </Routes>
+      <DevToolsMenu />
     </BrowserRouter>
   );
 }
