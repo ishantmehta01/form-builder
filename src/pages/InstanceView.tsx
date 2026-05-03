@@ -76,9 +76,24 @@ export function InstanceView() {
           {templateSnapshot.fields.map((field) => {
             if (visibility[field.id] === false) return null;
             const value = values[field.id];
+
+            // Visible-but-empty value-capturing fields render label + em dash,
+            // mirroring PDF's E2 rule. Without this we'd render an empty disabled
+            // input which is visually indistinguishable from a "no answer" field
+            // and confusing in a read-only submitted-instance view.
+            const mod = registry[field.type];
+            if (value === undefined && mod.capturesValue) {
+              return (
+                <div key={field.id} data-testid={`instance-field-${field.id}`}>
+                  <div className="text-sm font-medium text-gray-700">{field.label}</div>
+                  <div className="text-gray-400 mt-0.5" data-testid={`instance-empty-${field.id}`}>—</div>
+                </div>
+              );
+            }
+
             return (
-              <div key={field.id}>
-                {registry[field.type].renderer({
+              <div key={field.id} data-testid={`instance-field-${field.id}`}>
+                {mod.renderer({
                   field: field as never,
                   value: value ?? undefined,
                   onChange: () => undefined,

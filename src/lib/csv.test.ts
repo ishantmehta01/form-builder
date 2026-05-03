@@ -13,6 +13,14 @@ function makeInstance(id: string, snapshot: Template, values: Record<string, unk
   return { id, templateId: snapshot.id, templateSnapshot: snapshot, values, visibility, submittedAt: '2026-01-01T00:00:00Z' };
 }
 
+// CSV rows are prefixed with 3 meta columns per decision-log G1:
+//   Instance ID, Submitted At, Template Version
+// fieldCells() returns just the field-cell portion so per-type serialization
+// assertions don't have to know about meta column values.
+function fieldCells(row: string): string {
+  return row.split(',').slice(3).join(',');
+}
+
 const textField: Field = { id: 'name', type: 'text', label: 'Name', conditions: [], conditionLogic: 'OR', defaultVisible: true, defaultRequired: false, config: {} };
 const numField: Field = { id: 'age', type: 'number', label: 'Age', conditions: [], conditionLogic: 'OR', defaultVisible: true, defaultRequired: false, config: { decimalPlaces: 0 } };
 const dateField: Field = { id: 'dob', type: 'date', label: 'DOB', conditions: [], conditionLogic: 'OR', defaultVisible: true, defaultRequired: false, config: { prefillToday: false } };
@@ -60,6 +68,44 @@ describe('CSV export — basic structure', () => {
     expect(header).toContain('Name');
     expect(header).not.toContain('Section');
   });
+
+  it('header includes meta columns first (Instance ID, Submitted At, Template Version) per G1', () => {
+    const snap = makeTemplate('t1', [textField]);
+    const inst = makeInstance('i1', snap, { name: 'Alice' }, { name: true });
+    exportCSV([inst], 'test.csv');
+    const [header] = capturedCSV.split('\r\n');
+    const cols = (header ?? '').split(',');
+    expect(cols[0]).toBe('Instance ID');
+    expect(cols[1]).toBe('Submitted At');
+    expect(cols[2]).toBe('Template Version');
+    expect(cols[3]).toBe('Name'); // field columns follow
+  });
+
+  it('each instance row has its meta values populated', () => {
+    const snap = makeTemplate('t1', [textField]);
+    const inst = makeInstance('i1', snap, { name: 'Alice' }, { name: true });
+    exportCSV([inst], 'test.csv');
+    const rows = capturedCSV.split('\r\n');
+    const cells = (rows[1] ?? '').split(',');
+    expect(cells[0]).toBe('i1');
+    expect(cells[1]).toBe('2026-01-01T00:00:00Z'); // submittedAt
+    expect(cells[2]).toBe('2026-01-01T00:00:00Z'); // templateSnapshot.modifiedAt
+  });
+
+  it('all-empty fields still produce a non-empty data row (visible-but-empty regression)', () => {
+    // Reproducer for the "just header, no rows" issue surfaced during S13 manual smoke.
+    // Previously, an instance with all visible-but-empty fields produced an entirely
+    // empty data row that visually disappeared in Excel/Sheets. With meta columns,
+    // the row always has Instance ID + Submitted At + Template Version, so a row
+    // exists for every submitted instance regardless of field-cell content.
+    const snap = makeTemplate('t1', [textField]);
+    const inst = makeInstance('i1', snap, {} /* no values */, { name: true });
+    exportCSV([inst], 'test.csv');
+    const rows = capturedCSV.split('\r\n');
+    expect(rows.length).toBe(2); // header + 1 data row
+    expect(rows[1]).toContain('i1');
+    expect(rows[1]).toContain('2026-01-01T00:00:00Z');
+  });
 });
 
 describe('CSV export — RFC 4180 escaping', () => {
@@ -91,7 +137,7 @@ describe('CSV export — per-type serialization', () => {
     const inst = makeInstance('i1', snap, { age: 25 }, { age: true });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('25');
+    expect(fieldCells(rows[1] ?? '')).toBe('25');
   });
 
   it('date → YYYY-MM-DD string', () => {
@@ -99,7 +145,7 @@ describe('CSV export — per-type serialization', () => {
     const inst = makeInstance('i1', snap, { dob: '1990-06-15' }, { dob: true });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('1990-06-15');
+    expect(fieldCells(rows[1] ?? '')).toBe('1990-06-15');
   });
 
   it('single_select → option label not ID', () => {
@@ -107,7 +153,7 @@ describe('CSV export — per-type serialization', () => {
     const inst = makeInstance('i1', snap, { color: 'r' }, { color: true });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('Red');
+    expect(fieldCells(rows[1] ?? '')).toBe('Red');
   });
 
   it('multi_select → labels joined with separator', () => {
@@ -134,7 +180,7 @@ describe('CSV export — per-type serialization', () => {
     const inst = makeInstance('i1', snap, { total: 99.5 }, { total: true });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('99.50');
+    expect(fieldCells(rows[1] ?? '')).toBe('99.50');
   });
 });
 
@@ -144,7 +190,7 @@ describe('CSV export — visibility and empty cells', () => {
     const inst = makeInstance('i1', snap, { name: 'Alice', age: 30 }, { name: true, age: false });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('Alice,');
+    expect(fieldCells(rows[1] ?? '')).toBe('Alice,');
   });
 
   it('visible-but-empty field → empty cell', () => {
@@ -152,7 +198,7 @@ describe('CSV export — visibility and empty cells', () => {
     const inst = makeInstance('i1', snap, { name: 'Alice' }, { name: true, age: true });
     exportCSV([inst], 'test.csv');
     const rows = capturedCSV.split('\r\n');
-    expect(rows[1]).toBe('Alice,');
+    expect(fieldCells(rows[1] ?? '')).toBe('Alice,');
   });
 });
 
