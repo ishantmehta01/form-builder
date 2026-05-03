@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTemplatesStore } from '@/stores/templates';
+import { useToastsStore } from '@/stores/toasts';
 import { registry } from '@/registry';
 import { findCycle, buildConditionGraph } from '@/engine/graph';
 import type { Field, FieldType } from '@/types/field';
@@ -282,6 +283,7 @@ export function Builder() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
   const { templates, addTemplate, updateTemplate } = useTemplatesStore();
+  const pushToast = useToastsStore((s) => s.pushToast);
 
   const isNew = templateId === undefined || templateId === 'new';
   const existing = templateId && !isNew ? templates[templateId] : undefined;
@@ -373,6 +375,7 @@ export function Builder() {
     const cycle = findCycle(graph);
     if (cycle !== null) {
       setSaveError(`Cycle detected in conditions: ${cycle.join(' → ')}. Fix before saving.`);
+      pushToast('Fix errors before saving', 'error');
       return;
     }
 
@@ -387,10 +390,12 @@ export function Builder() {
     if (isNew || !existing) {
       addTemplate(template);
       setIsDirty(false);
+      pushToast('Form created');
       navigate(`/templates/${template.id}/edit`, { replace: true });
     } else {
       updateTemplate(template);
       setIsDirty(false);
+      pushToast('Form saved');
     }
   };
 

@@ -6,6 +6,7 @@ import { InstancesList } from './pages/InstancesList';
 import { InstanceView } from './pages/InstanceView';
 import { DevToolsMenu } from './components/DevToolsMenu';
 import { DevToolsDock } from './components/DevToolsDock';
+import { ToastContainer } from './components/ToastContainer';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
       </Routes>
       <DevToolsMenu />
       <DevToolsDock />
+      <ToastContainer />
     </BrowserRouter>
   );
 }

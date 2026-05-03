@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTemplatesStore } from '@/stores/templates';
 import { useInstancesStore } from '@/stores/instances';
+import { useToastsStore } from '@/stores/toasts';
 import { registry } from '@/registry';
 import { evaluate } from '@/engine/evaluate';
 import { validateForm } from '@/engine/validateForm';
@@ -13,6 +14,7 @@ export function Fill() {
   const navigate = useNavigate();
   const { templates, invalidTemplateIds, loadFromStorage: loadTemplates } = useTemplatesStore();
   const { addInstance, loadFromStorage: loadInstances } = useInstancesStore();
+  const pushToast = useToastsStore((s) => s.pushToast);
 
   const [values, setValues] = useState<Values>({});
   const [errors, setErrors] = useState<Record<string, ValidationError[]>>({});
@@ -87,6 +89,7 @@ export function Fill() {
       if (firstErrorId) {
         fieldRefs.current[firstErrorId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
+      pushToast('Please fix the errors before submitting', 'error');
       return;
     }
 
@@ -111,6 +114,7 @@ export function Fill() {
     };
 
     addInstance(instance);
+    pushToast('Response submitted');
     navigate(`/instances/${instance.id}`);
   };
 
