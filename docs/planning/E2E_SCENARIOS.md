@@ -993,6 +993,38 @@ expect(t).toBeLessThan(50);
 
 ---
 
+### S41 — Preview with unsaved changes prompts confirm dialog (Tier 1)
+
+**Bug surfaced 2026-05-03:** clicking Preview with unsaved changes silently navigated to the *last saved* template — not the in-memory canvas state — leaving the user confused why their latest edits didn't appear in preview. Fix: explicit confirm dialog ("Save & preview") that runs the full save flow (including cycle validation) before navigating. Cancel button preserves edits in builder. UX option B from the design discussion.
+
+**Preconditions:** localStorage clear.
+
+**Steps:**
+1. Build template "Survey", add one field "Email", save → templates list shows "Survey, 1 field"
+2. Click Edit on "Survey" to re-enter Builder
+3. Add a new field "Phone" — `Unsaved changes` indicator appears
+4. Click Preview
+5. **Confirm dialog opens** — title `Unsaved changes`, two buttons: `Cancel` and `Save & preview`
+6. Click Cancel → dialog closes, still in Builder, "Phone" field still on canvas, still dirty
+7. Click Preview again, this time click `Save & preview`
+8. Builder saves (cycle validation runs), navigates to Fill mode with `state.from = 'builder'`
+9. Preview shows BOTH "Email" AND "Phone" fields (latest state)
+
+**Expected:**
+- Preview button does NOT navigate when dirty without confirmation
+- Cancel preserves builder state, never persists
+- Save & preview persists + navigates only if save succeeds (cycle blocks save → blocks navigation)
+- If form is clean (`isDirty: false`), Preview navigates directly without dialog
+- `[data-testid="preview-confirm-dialog"]` has `role="dialog"` and `aria-modal="true"` for a11y
+- Cancel button is auto-focused for safety (avoid accidental save)
+
+**Negative test (regression guard):**
+- Build with cycle → click Preview → click Save & preview → save fails (cycle detected) → dialog closes, navigation blocked, inline cycle error visible in builder, error toast shown
+
+**Maps to:** `tests/e2e/builder.spec.ts`. One Playwright `test()` titled `S41 — Preview with unsaved changes prompts confirm dialog`.
+
+---
+
 ## Future / reserved
 
-When you find a manual bug not covered by S1–S40, append a new scenario in this section, fix the bug, then add to Playwright. Keeps the test suite a living spec, not a frozen snapshot.
+When you find a manual bug not covered by S1–S41, append a new scenario in this section, fix the bug, then add to Playwright. Keeps the test suite a living spec, not a frozen snapshot.
