@@ -1,0 +1,52 @@
+/* PDF / Print styles */
+
+@media print {
+  body > *:not(#print-region) {
+    display: none !important;
+  }
+
+  #print-region {
+    display: block !important;
+  }
+
+  /* Reset colors for print */
+  #print-region {
+    color: #000;
+    background: #fff;
+    font-family: Georgia, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  .print-field-row {
+    page-break-inside: avoid;
+    margin-bottom: 12pt;
+  }
+
+  .print-section-header {
+    page-break-after: avoid;
+    margin-top: 16pt;
+    margin-bottom: 8pt;
+  }
+
+  /* @page margin boxes for form title header and page counter footer.
+     Chrome: fully supported. Firefox: partial (header/footer boxes may not render in all versions).
+     Safari: @page margin boxes are ignored; counter(page) unreliable.
+     Decision: ship counter(page) only — skip "Page X of Y" per K2. */
+  @page {
+    margin: 2cm;
+    size: A4 portrait;
+
+    @top-center {
+      content: attr(data-form-title);
+      font-size: 9pt;
+      color: #666;
+    }
+
+    @bottom-right {
+      content: 'Page ' counter(page);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+}
