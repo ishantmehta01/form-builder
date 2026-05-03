@@ -163,27 +163,137 @@ function ConditionEditor({ field, allFields, onChange }: { field: Field; allFiel
                   className="border rounded px-1 py-0.5 flex-1"
                   value={cond.operator}
                   onChange={(e) => {
+                    // Reset value to a sensible default for the NEW operator's expected shape.
+                    // Always-'' was wrong for number/multi/within_range operators.
+                    const newOp = e.target.value;
+                    const defaultValue: unknown =
+                      newOp === 'number_within_range' ? [0, 0] :
+                      newOp.startsWith('number_') ? 0 :
+                      newOp.startsWith('multi_') ? [] :
+                      '';
                     const conditions = [...field.conditions];
-                    conditions[idx] = { ...cond, operator: e.target.value as typeof cond.operator, value: '' } as typeof cond;
+                    conditions[idx] = { ...cond, operator: newOp as typeof cond.operator, value: defaultValue } as typeof cond;
                     onChange({ ...field, conditions });
                   }}
                 >
                   {ops.map((op) => <option key={op} value={op}>{op}</option>)}
                 </select>
-                <input
-                  className="border rounded px-1 py-0.5 flex-1"
-                  placeholder="value"
-                  value={typeof cond.value === 'string' ? cond.value : JSON.stringify(cond.value)}
-                  onChange={(e) => {
-                    let val: unknown = e.target.value;
-                    if (cond.operator === 'number_equals' || cond.operator === 'number_gt' || cond.operator === 'number_lt') {
-                      val = parseFloat(e.target.value) || 0;
-                    }
+                {(() => {
+                  // Per-operator value editor. A bare text input is wrong for
+                  // every operator except text_*: select operators compare against
+                  // option IDs (UUIDs), multi_contains_* expects string[], date_*
+                  // expects YYYY-MM-DD, number_within_range expects [min, max].
+                  // Storing the raw label/string here was the S8 bug — engine
+                  // compared "Yes" against the option's UUID and never matched.
+                  const op = cond.operator;
+                  const updateValue = (val: unknown) => {
                     const conditions = [...field.conditions];
                     conditions[idx] = { ...cond, value: val } as typeof cond;
                     onChange({ ...field, conditions });
-                  }}
-                />
+                  };
+
+                  // Single-select option picker (stores option ID)
+                  if (op === 'select_equals' || op === 'select_not_equals') {
+                    const opts = target && target.type === 'single_select' ? target.config.options : [];
+                    return (
+                      <select
+                        className="border rounded px-1 py-0.5 flex-1"
+                        value={typeof cond.value === 'string' ? cond.value : ''}
+                        onChange={(e) => updateValue(e.target.value)}
+                      >
+                        <option value="">— pick option —</option>
+                        {opts.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+                      </select>
+                    );
+                  }
+
+                  // Multi-select option pickers (stores string[])
+                  if (op === 'multi_contains_any' || op === 'multi_contains_all' || op === 'multi_contains_none') {
+                    const opts = target && target.type === 'multi_select' ? target.config.options : [];
+                    const selected = Array.isArray(cond.value) ? (cond.value as string[]) : [];
+                    return (
+                      <div className="flex flex-col gap-0.5 flex-1 border rounded px-1 py-1">
+                        {opts.length === 0 && <span className="text-xs text-gray-400 italic">target has no options</span>}
+                        {opts.map((opt) => (
+                          <label key={opt.id} className="flex items-center gap-1 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(opt.id)}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...selected, opt.id]
+                                  : selected.filter((id) => id !== opt.id);
+                                updateValue(next);
+                              }}
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  // Number within range — two number inputs (stores [min, max])
+                  if (op === 'number_within_range') {
+                    const range: [number, number] = (Array.isArray(cond.value) && cond.value.length === 2)
+                      ? (cond.value as [number, number])
+                      : [0, 0];
+                    return (
+                      <div className="flex gap-1 flex-1 items-center">
+                        <input
+                          type="number"
+                          className="border rounded px-1 py-0.5 w-full"
+                          placeholder="min"
+                          value={range[0]}
+                          onChange={(e) => updateValue([parseFloat(e.target.value) || 0, range[1]])}
+                        />
+                        <span className="text-xs text-gray-400">to</span>
+                        <input
+                          type="number"
+                          className="border rounded px-1 py-0.5 w-full"
+                          placeholder="max"
+                          value={range[1]}
+                          onChange={(e) => updateValue([range[0], parseFloat(e.target.value) || 0])}
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Number scalar (stores number)
+                  if (op === 'number_equals' || op === 'number_gt' || op === 'number_lt') {
+                    return (
+                      <input
+                        type="number"
+                        className="border rounded px-1 py-0.5 flex-1"
+                        placeholder="value"
+                        value={typeof cond.value === 'number' ? cond.value : ''}
+                        onChange={(e) => updateValue(parseFloat(e.target.value) || 0)}
+                      />
+                    );
+                  }
+
+                  // Date (stores YYYY-MM-DD string)
+                  if (op === 'date_equals' || op === 'date_before' || op === 'date_after') {
+                    return (
+                      <input
+                        type="date"
+                        className="border rounded px-1 py-0.5 flex-1"
+                        value={typeof cond.value === 'string' ? cond.value : ''}
+                        onChange={(e) => updateValue(e.target.value)}
+                      />
+                    );
+                  }
+
+                  // Default: text operators (text_equals / text_not_equals / text_contains)
+                  return (
+                    <input
+                      className="border rounded px-1 py-0.5 flex-1"
+                      placeholder="value"
+                      value={typeof cond.value === 'string' ? cond.value : ''}
+                      onChange={(e) => updateValue(e.target.value)}
+                    />
+                  );
+                })()}
               </div>
             )}
             <button
@@ -374,7 +484,15 @@ export function Builder() {
     const graph = buildConditionGraph(mockTemplate);
     const cycle = findCycle(graph);
     if (cycle !== null) {
-      setSaveError(`Cycle detected in conditions: ${cycle.join(' → ')}. Fix before saving.`);
+      // Map field IDs to human-readable labels for the error message.
+      // findCycle returns IDs because the graph algorithm doesn't know about labels;
+      // the Builder is the right place to do the lookup since it owns `fields`.
+      const cycleLabels = cycle.map((id) => {
+        const field = fields.find((f) => f.id === id);
+        const label = field?.label?.trim();
+        return label && label.length > 0 ? `'${label}'` : '(unnamed field)';
+      }).join(' → ');
+      setSaveError(`Cycle detected in conditions: ${cycleLabels}. Fix before saving.`);
       pushToast('Fix errors before saving', 'error');
       return;
     }
