@@ -2,14 +2,23 @@ import { useState } from 'react';
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
-function JsonNode({ label, value, depth }: { label?: string; value: JsonValue; depth: number }) {
+function JsonNode({
+  label, value, depth, expandDepth,
+}: {
+  label?: string;
+  value: JsonValue;
+  depth: number;
+  expandDepth: number;
+}) {
   const isExpandable = value !== null && typeof value === 'object';
-  const [expanded, setExpanded] = useState(depth === 0);
+  const [expanded, setExpanded] = useState(depth <= expandDepth);
 
-  const labelEl = label !== undefined ? (
-    <span className="text-purple-700 font-mono">"{label}"</span>
-  ) : null;
-  const colon = label !== undefined ? <span className="text-gray-400 mr-1">:</span> : null;
+  const labelEl = label !== undefined
+    ? <span className="text-purple-700 font-mono">"{label}"</span>
+    : null;
+  const colon = label !== undefined
+    ? <span className="text-gray-400 mr-1">:</span>
+    : null;
 
   if (!isExpandable) {
     return (
@@ -23,10 +32,9 @@ function JsonNode({ label, value, depth }: { label?: string; value: JsonValue; d
   const isArray = Array.isArray(value);
   const keys = isArray ? null : Object.keys(value as object);
   const count = isArray ? (value as JsonValue[]).length : (keys as string[]).length;
-  const empty = count === 0;
   const bracket = isArray ? ['[', ']'] : ['{', '}'];
 
-  if (empty) {
+  if (count === 0) {
     return (
       <div className="leading-5">
         {labelEl}{colon}
@@ -58,12 +66,12 @@ function JsonNode({ label, value, depth }: { label?: string; value: JsonValue; d
           <div className="ml-4 border-l border-gray-200 pl-3">
             {isArray
               ? (value as JsonValue[]).map((item, i) => (
-                  <JsonNode key={i} label={String(i)} value={item} depth={depth + 1} />
+                  <JsonNode key={i} label={String(i)} value={item} depth={depth + 1} expandDepth={expandDepth} />
                 ))
               : (keys as string[]).map(k => {
                   const v = (value as Record<string, JsonValue>)[k];
                   return v !== undefined
-                    ? <JsonNode key={k} label={k} value={v} depth={depth + 1} />
+                    ? <JsonNode key={k} label={k} value={v} depth={depth + 1} expandDepth={expandDepth} />
                     : null;
                 })}
           </div>
@@ -83,13 +91,13 @@ function Primitive({ value }: { value: string | number | boolean | null }) {
   return <span className="text-green-700 font-mono">"{value}"</span>;
 }
 
-export function JsonTree({ value }: { value: unknown }) {
+export function JsonTree({ value, expandDepth = 0 }: { value: unknown; expandDepth?: number }) {
   return (
     <div
       data-testid="json-tree"
       className="text-sm font-mono overflow-auto p-4 bg-gray-50 rounded-b-lg"
     >
-      <JsonNode value={value as JsonValue} depth={0} />
+      <JsonNode value={value as JsonValue} depth={0} expandDepth={expandDepth} />
     </div>
   );
 }

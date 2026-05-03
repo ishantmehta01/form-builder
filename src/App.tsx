@@ -5,6 +5,7 @@ import { Fill } from './pages/Fill';
 import { InstancesList } from './pages/InstancesList';
 import { InstanceView } from './pages/InstanceView';
 import { DevToolsMenu } from './components/DevToolsMenu';
+import { DevToolsDock } from './components/DevToolsDock';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/instances/:instanceId" element={<InstanceView />} />
       </Routes>
       <DevToolsMenu />
+      <DevToolsDock />
     </BrowserRouter>
   );
 }

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useDevToolsStore } from '@/stores/devtools';
 import { JsonTree } from './JsonTree';
 
 export function DevToolsMenu() {
+  const { storageOpen, setStorageOpen, setDocked } = useDevToolsStore();
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [storageOpen, setStorageOpen] = useState(false);
   const [storageData, setStorageData] = useState<{ found: false } | { found: true; value: unknown }>({ found: false });
   const menuRef = useRef<HTMLDivElement>(null);
   const confirmTitleId = 'dev-tools-confirm-title';
@@ -32,7 +33,7 @@ export function DevToolsMenu() {
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [confirmOpen, storageOpen]);
+  }, [confirmOpen, storageOpen, setStorageOpen]);
 
   function handleClearConfirm() {
     localStorage.removeItem('formBuilder');
@@ -52,6 +53,11 @@ export function DevToolsMenu() {
     }
     setOpen(false);
     setStorageOpen(true);
+  }
+
+  function handleDock() {
+    setDocked(true);
+    setStorageOpen(false);
   }
 
   return (
@@ -149,14 +155,24 @@ export function DevToolsMenu() {
               <h2 id={storageTitleId} className="text-base font-semibold text-gray-900">
                 localStorage — formBuilder
               </h2>
-              <button
-                data-testid="close-storage-viewer"
-                onClick={() => setStorageOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
-                aria-label="Close"
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  data-testid="dock-storage-viewer"
+                  onClick={handleDock}
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded border border-gray-200"
+                  title="Dock to right side panel"
+                >
+                  Dock to right →
+                </button>
+                <button
+                  data-testid="close-storage-viewer"
+                  onClick={() => setStorageOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <div className="overflow-auto flex-1" data-testid="storage-content">
               {storageData.found

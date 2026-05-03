@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DevToolsMenu } from './DevToolsMenu';
+import { DevToolsDock } from './DevToolsDock';
+import { useDevToolsStore } from '@/stores/devtools';
 
 const removeItemMock = vi.fn();
 const localStorageMock = (() => {
@@ -20,6 +22,7 @@ beforeEach(() => {
   Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
   removeItemMock.mockClear();
   reloadMock.mockClear();
+  useDevToolsStore.setState({ docked: false, storageOpen: false });
 });
 
 afterEach(() => {
@@ -132,6 +135,38 @@ describe('DevToolsMenu', () => {
       fireEvent.click(screen.getByTestId('show-storage-action'));
       fireEvent.keyDown(document, { key: 'Escape' });
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Dock mode', () => {
+    it('storage viewer contains "Dock to right" button', () => {
+      setup();
+      fireEvent.click(screen.getByTestId('dev-tools-button'));
+      fireEvent.click(screen.getByTestId('show-storage-action'));
+      expect(screen.getByTestId('dock-storage-viewer')).toBeInTheDocument();
+    });
+
+    it('clicking dock button closes modal and sets store.docked=true', () => {
+      render(<><DevToolsMenu /><DevToolsDock /></>);
+      fireEvent.click(screen.getByTestId('dev-tools-button'));
+      fireEvent.click(screen.getByTestId('show-storage-action'));
+      fireEvent.click(screen.getByTestId('dock-storage-viewer'));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(useDevToolsStore.getState().docked).toBe(true);
+      expect(screen.getByTestId('dev-tools-dock')).toBeInTheDocument();
+    });
+
+    it('dock button writes __devtools.docked=true to localStorage', () => {
+      const setItemMock = vi.fn();
+      Object.defineProperty(window, 'localStorage', {
+        value: { ...localStorageMock, setItem: setItemMock },
+        writable: true,
+      });
+      setup();
+      fireEvent.click(screen.getByTestId('dev-tools-button'));
+      fireEvent.click(screen.getByTestId('show-storage-action'));
+      fireEvent.click(screen.getByTestId('dock-storage-viewer'));
+      expect(setItemMock).toHaveBeenCalledWith('__devtools.docked', 'true');
     });
   });
 });
