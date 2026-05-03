@@ -297,3 +297,39 @@ Added 10 more E2E scenarios (10 test() blocks) across existing spec files. All 2
 - **20 E2E tests passing** (S1–S18 + S41)
 - **343 unit tests passing** (unchanged)
 - Total: **363 tests**
+
+## 2026-05-03 17:50 — E2E Phase E4 (batch 3): Scenarios S19–S39 implemented; S33/S37/S40 not automated
+
+Added 18 more E2E scenarios across 5 spec files. All 38 E2E tests pass.
+
+**New tests:**
+- **S19** (fill.spec.ts) — Calc output as condition target (A5): Total=sum(A,B) drives Bonus visibility via `number_gt`
+- **S20** (fill.spec.ts) — Hidden required doesn't block submit (A2): `visibility[reasonId]=false`, `values[reasonId]` absent in stored instance
+- **S21** (fill.spec.ts) — Hide-wins precedence (A1): when both Show and Hide fire, Hide wins; cross-effect deterministic
+- **S22** (fill.spec.ts) — AND logic per-effect-group (A1): both Show conditions must match before field appears
+- **S23** (fill.spec.ts) — Empty condition group inactive (P4): `[].every(…)===true` vacuous-truth guard; field respects `defaultVisible`
+- **S24** (fill.spec.ts) — All-empty sources calc shows `—` not `0` (H5+B1): `sourceValues.length===0` early-continue; instance omits calc value
+- **S26** (fill.spec.ts) — Raw number value in conditions (A6): `99.9` stored raw, displays as `100` (rounded), condition `>99.9` evaluates against `99.9` → false
+- **S27** (fill.spec.ts) — Decimal precision: `1.1+2.2+3.3` JS float artifact `6.6000…5` is correctly formatted to `6.60` by `toFixed(2)`
+- **S28** (instance.spec.ts) — Snapshot semantics (D4): I1 renders its own "Email" label; I2 renders "Contact"+"Phone" — both independent of live template
+- **S29** (export.spec.ts) — CSV renamed field (G1): latest-snapshot label "Contact" wins in header; I1's old "Email" data maps to same column
+- **S30** (export.spec.ts) — CSV removed field (G1): removed field B still appears as column in union; I2's B cell is empty
+- **S31** (fill.spec.ts) — Three displayTypes identical option ID: radio/dropdown/tiles all store `blueId`, not the label string
+- **S32** (fill.spec.ts) — Tiles keyboard selection: `focus()` + `Space` selects tile; `aria-pressed` toggled; Tab + Space switches selection
+- **S34** (builder.spec.ts) — Quarantine badge: cyclic template injected via localStorage; reload triggers load-time cycle detection; `quarantine-badge-${id}` shown; New Response button absent
+- **S35** (persistence.spec.ts) — Future-version data: `version:999` causes `load()` to throw; store catches; templates list empty; no crash
+- **S36** (persistence.spec.ts) — Malformed JSON: parse failure caught; empty state; app fully functional
+- **S38** (export.spec.ts) — Special chars round-trip: `Order #1, "priority" <test>` renders correctly in instance view; CSV header RFC 4180-escaped
+- **S39** (fill.spec.ts) — Back/forward routing: fill→submit→instance→back→fill→back→list→forward→fill→forward→instance; all pages rehydrate cleanly
+
+**Source change:** `src/pages/TemplatesList.tsx` — added `data-testid="quarantine-badge-${t.id}"` to quarantine badge div (enables S34).
+
+**Not automated (with reason):**
+- **S33** (Tier 2) — File field `max_files` + `allowedTypes` boundary: requires `page.setInputFiles()` with real file handles; the file renderer uses a native `<input type="file">` with custom metadata-only storage, making headless attachment non-trivial without a temp-file fixture. Covered by unit tests in `src/fields/file/file.test.tsx`.
+- **S37** (Tier 3) — Paste formatting stripped: depends on `navigator.clipboard.writeText` + OS clipboard permissions in headless mode; not reliably testable cross-platform. React's `<input>` inherently strips HTML on paste — behavior is browser-native, not app logic.
+- **S40** (Tier 3) — 50-field performance: `performance.now()` timing in Playwright is unreliable under CI load; thresholds (200ms render, 16ms per-keystroke) cannot be asserted without a stable baseline. Better verified via manual profiling in DevTools.
+
+**Final counts:**
+- **38 E2E tests passing** (S1–S24 + S26–S32 + S34–S36 + S38–S39 + S41)
+- **343 unit tests passing** (unchanged)
+- Total: **381 tests**
