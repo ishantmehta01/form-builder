@@ -58,6 +58,7 @@ function newField(type: FieldType): Field {
 
 interface SortableFieldItemProps {
   field: Field;
+  index: number;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -66,6 +67,7 @@ interface SortableFieldItemProps {
 
 function SortableFieldItem({
   field,
+  index,
   isSelected,
   onSelect,
   onDelete,
@@ -79,6 +81,7 @@ function SortableFieldItem({
     <div
       ref={setNodeRef}
       style={style}
+      data-testid={`canvas-field-${index}`}
       className={`border rounded p-3 cursor-pointer flex items-center gap-2 group ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"}`}
       onClick={onSelect}
     >
@@ -457,6 +460,7 @@ function ConfigPanel({ field, allFields, onChange }: ConfigPanelProps) {
           Label
         </label>
         <input
+          data-testid="config-label"
           className="border rounded px-2 py-1 w-full text-sm"
           value={field.label}
           onChange={(e) => onChange({ ...field, label: e.target.value })}
@@ -667,6 +671,7 @@ export function Builder() {
           ← Forms
         </Link>
         <input
+          data-testid="template-title"
           className="flex-1 font-bold text-lg border-none outline-none"
           placeholder="Untitled form"
           value={title}
@@ -677,7 +682,7 @@ export function Builder() {
         />
         <div className="flex gap-2 items-center">
           {saveError && (
-            <span className="text-red-600 text-xs">{saveError}</span>
+            <span data-testid="save-error" className="text-red-600 text-xs">{saveError}</span>
           )}
           {isDirty && (
             <span className="text-amber-500 text-xs">Unsaved changes</span>
@@ -707,6 +712,7 @@ export function Builder() {
           )}
           <button
             type="button"
+            data-testid="save-template"
             onClick={handleSave}
             className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm font-medium hover:bg-blue-700"
           >
@@ -726,6 +732,7 @@ export function Builder() {
               <button
                 key={type}
                 type="button"
+                data-testid={`add-field-${type}`}
                 onClick={() => addField(type)}
                 className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white hover:shadow-sm transition-all"
               >
@@ -736,7 +743,7 @@ export function Builder() {
         </div>
 
         {/* Center — sortable canvas */}
-        <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex-1 p-4 overflow-y-auto" data-testid="builder-canvas">
           {fields.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400">
               <p>Add fields from the left panel</p>
@@ -756,6 +763,7 @@ export function Builder() {
                     <SortableFieldItem
                       key={field.id}
                       field={field}
+                      index={idx}
                       isSelected={selectedIdx === idx}
                       onSelect={() => setSelectedIdx(idx)}
                       onDelete={() => deleteField(idx)}

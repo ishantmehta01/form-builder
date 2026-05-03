@@ -1,9 +1,5 @@
 # Playwright E2E Plan — Form Builder
 
-> Paste everything below the `---` line into a fresh Claude Code session in `/Users/ishantmehta/Desktop/work/form-builder`. Use `/model sonnet` and `/effort high`. Do NOT use Opus.
->
-> Run this AFTER `CompletionPrompt.md` completes. Prerequisites: G0–G10 done, `npm test` passes, `npm run dev` opens cleanly. If those aren't true, run CompletionPrompt first.
-
 ---
 
 ## Context
@@ -38,32 +34,32 @@ Read these to understand the current state — **do not re-implement, do not cha
 1. `npm install -D @playwright/test`
 2. `npx playwright install chromium` (downloads ~150MB; expect to see download progress)
 3. Create `playwright.config.ts` at project root:
+
    ```ts
-   import { defineConfig, devices } from '@playwright/test';
+   import { defineConfig, devices } from "@playwright/test";
 
    export default defineConfig({
-     testDir: './tests/e2e',
+     testDir: "./tests/e2e",
      fullyParallel: true,
      forbidOnly: !!process.env.CI,
      retries: process.env.CI ? 2 : 0,
      workers: process.env.CI ? 1 : undefined,
-     reporter: 'html',
+     reporter: "html",
      use: {
-       baseURL: 'http://localhost:5173',
-       trace: 'on-first-retry',
-       screenshot: 'only-on-failure',
+       baseURL: "http://localhost:5173",
+       trace: "on-first-retry",
+       screenshot: "only-on-failure",
      },
-     projects: [
-       { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-     ],
+     projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
      webServer: {
-       command: 'npm run dev',
-       url: 'http://localhost:5173',
+       command: "npm run dev",
+       url: "http://localhost:5173",
        reuseExistingServer: !process.env.CI,
        timeout: 120_000,
      },
    });
    ```
+
 4. Add npm scripts to `package.json`:
    ```json
    "test:e2e": "playwright test",
@@ -87,22 +83,38 @@ Read these to understand the current state — **do not re-implement, do not cha
 Create `tests/e2e/helpers.ts` with reusable helpers:
 
 ```ts
-import type { Page, Locator } from '@playwright/test';
+import type { Page, Locator } from "@playwright/test";
 
 // Navigate to home and wait for templates list to render
 export async function gotoHome(page: Page) {
-  await page.goto('/');
-  await page.waitForSelector('[data-testid="templates-list"]', { timeout: 5_000 });
+  await page.goto("/");
+  await page.waitForSelector('[data-testid="templates-list"]', {
+    timeout: 5_000,
+  });
 }
 
 // Navigate to builder for new template
 export async function gotoNewBuilder(page: Page) {
-  await page.goto('/templates/new');
-  await page.waitForSelector('[data-testid="builder-canvas"]', { timeout: 5_000 });
+  await page.goto("/templates/new");
+  await page.waitForSelector('[data-testid="builder-canvas"]', {
+    timeout: 5_000,
+  });
 }
 
 // Add a field of given type from the left palette
-export async function addField(page: Page, type: 'text' | 'number' | 'date' | 'single_select' | 'multi_select' | 'file' | 'section_header' | 'calculation' | 'textarea') {
+export async function addField(
+  page: Page,
+  type:
+    | "text"
+    | "number"
+    | "date"
+    | "single_select"
+    | "multi_select"
+    | "file"
+    | "section_header"
+    | "calculation"
+    | "textarea",
+) {
   await page.click(`[data-testid="add-field-${type}"]`);
   await page.waitForTimeout(100); // brief wait for state propagation; replace with selector wait if flake
 }
@@ -116,7 +128,10 @@ export async function setLabel(page: Page, label: string) {
 export async function saveTemplate(page: Page): Promise<boolean> {
   await page.click('[data-testid="save-template"]');
   await page.waitForTimeout(300);
-  const errorVisible = await page.locator('[data-testid="save-error"]').isVisible().catch(() => false);
+  const errorVisible = await page
+    .locator('[data-testid="save-error"]')
+    .isVisible()
+    .catch(() => false);
   return !errorVisible;
 }
 
@@ -140,6 +155,7 @@ Audit the following components and add `data-testid` attributes where E2E needs 
 Required test IDs (minimum):
 
 **TemplatesList page:**
+
 - `[data-testid="templates-list"]` — root container
 - `[data-testid="new-template-button"]` — "New Template" button
 - `[data-testid="template-card-${id}"]` — each template card (templated by ID)
@@ -148,6 +164,7 @@ Required test IDs (minimum):
 - `[data-testid="delete-template-${id}"]` — delete button
 
 **Builder page:**
+
 - `[data-testid="builder-canvas"]` — center canvas
 - `[data-testid="add-field-${type}"]` — left-panel field-type buttons (one per type)
 - `[data-testid="canvas-field-${index}"]` — each field row on canvas
@@ -157,18 +174,21 @@ Required test IDs (minimum):
 - `[data-testid="template-title"]` — title input
 
 **Fill page:**
+
 - `[data-testid="fill-form"]` — root form container
 - `[data-testid="field-${id}"]` — each rendered field wrapper (use field id)
 - `[data-testid="submit-form"]` — submit button
 - `[data-testid="field-error-${id}"]` — inline validation error container per field
 
 **InstanceView page:**
+
 - `[data-testid="instance-view"]` — root container
 - `[data-testid="download-pdf"]` — Download PDF button
 - `[data-testid="export-csv"]` — Export CSV button (likely on InstancesList, not InstanceView)
 - `#print-region` — already exists; do not change
 
 **InstancesList page:**
+
 - `[data-testid="instances-list"]` — root
 - `[data-testid="instance-row-${id}"]` — each row
 
@@ -178,28 +198,36 @@ Run `npm run dev`, click through quickly to verify the test IDs are reachable. R
 
 ---
 
-### Phase E4 — Implement scenarios from `E2E_SCENARIOS.md` (60 min)
+### Phase E4 — Implement scenarios from `E2E_SCENARIOS.md` (~2 hours)
 
-**The source of truth for what to test is `docs/planning/E2E_SCENARIOS.md` — NOT this prompt.** That file has 15 numbered scenarios (S1–S15) with stable IDs, preconditions, numbered steps, and explicit expected outcomes. Each was hand-verified manually before this Playwright phase. Your job is **mechanical translation**, not invention.
+**The source of truth for what to test is `docs/planning/E2E_SCENARIOS.md` — NOT this prompt.** That file has **41 numbered scenarios (S1–S41)** plus **7 manual-only scenarios (M1–M7)**, with stable IDs, preconditions, numbered steps, and explicit expected outcomes. Each S1–S17 + S41 was hand-verified manually before this Playwright phase. S18–S40 are extended-coverage scenarios with **tier markers** (Tier 1 = must-cover, Tier 2 = strong, Tier 3 = nice-to-have). Your job is **mechanical translation**, not invention.
 
-**Read `docs/planning/E2E_SCENARIOS.md` first.** Then implement scenarios as Playwright `.spec.ts` files following the **Mapping to Playwright** section at the bottom of that file:
+**Read `docs/planning/E2E_SCENARIOS.md` end-to-end first.** Each scenario has a `Maps to:` annotation pointing to its target spec file — use that as the routing. Suggested file structure (final layout based on the per-scenario annotations):
 
-| Spec file | Scenarios |
-|---|---|
-| `tests/e2e/builder.spec.ts` | S1, S2, S7, S15 |
-| `tests/e2e/fill.spec.ts` | S8, S9, S10, S11, S14 |
-| `tests/e2e/instance.spec.ts` | S3, S4, S5, S12, S13 |
-| `tests/e2e/export.spec.ts` | S6 |
-| `tests/e2e/golden.spec.ts` | end-to-end chain S1→S2→S3→S5→S6 as one integration flow |
+| Spec file                       | Scenarios                                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/e2e/builder.spec.ts`     | S1, S2, S7, S15, S16, S17 (builder portion), S25, S34, S38 (builder portion), S41        |
+| `tests/e2e/fill.spec.ts`        | S8, S9, S10, S11, S14, S17 (fill portion), S18, S19, S20, S21, S22, S23, S24, S26, S27, S31, S32, S33, S37, S40 |
+| `tests/e2e/instance.spec.ts`    | S3, S4, S5, S12, S13, S28                                                                |
+| `tests/e2e/export.spec.ts`      | S6, S29, S30, S38 (export portion)                                                       |
+| `tests/e2e/persistence.spec.ts` | S35, S36 (new file for load-time invariants)                                             |
+| `tests/e2e/golden.spec.ts`      | end-to-end chain S1 → S2 → S3 → S5 → S6 as one integration flow + S39 navigation        |
+
+**Implementation scope — Tiers are how you triage if you fall behind:**
+
+- **Mandatory (must implement):** S1–S17 (all original golden + edge cases), S41 (preview-confirm), and all S18–S40 marked **Tier 1** in the scenarios file. Approximately **29 scenarios.** This is the must-ship floor.
+- **Strong (do unless out of time):** S18–S40 marked **Tier 2.** Approximately **9 more scenarios** (38 total).
+- **Nice-to-have:** S18–S40 marked **Tier 3** (S37, S39, S40). Implement if quota and time allow.
 
 **Rules for implementation:**
 
-1. **One Playwright `test()` per scenario.** Title = `Sx — <scenario title>` so failures are traceable back to the spec.
+1. **One Playwright `test()` per scenario.** Title = `Sx — <scenario title>` so failures are traceable back to the spec. Match the scenario's title verbatim.
 2. **Comment each test with the scenario ID** at the top, e.g., `// S7 — Cycle detection blocks save with informative error`.
 3. **Use the scenario's `Preconditions`** to write `test.beforeEach` setup. Use scenario's `Steps` as the sequence of Playwright actions. Use scenario's `Expected` to write assertions.
-4. **Do NOT add scenarios that aren't in S1–S15.** If you find missing coverage during implementation, append the new scenario to `E2E_SCENARIOS.md` first (in the "Future scenarios" section as S16+), then implement.
-5. **Do NOT skip scenarios.** All 15 must have a corresponding Playwright test. If a scenario is genuinely impossible to automate (e.g., visual-only check), still create the test and mark it `test.fixme()` with a comment pointing to the manual scenario in M1–M4. Log this in PROGRESS.md.
-6. **The manual-only scenarios M1–M4 do NOT get Playwright tests.** They're documented in E2E_SCENARIOS.md for human verification only.
+4. **Do NOT add scenarios that aren't in S1–S41.** If you find missing coverage during implementation, append the new scenario to `E2E_SCENARIOS.md` first (in the Future / reserved section), then implement.
+5. **Do NOT skip mandatory scenarios.** All Tier-1 + S1–S17 + S41 must have a corresponding Playwright test. If a scenario is genuinely impossible to automate (e.g., visual-only check), still create the test and mark it `test.fixme()` with a comment pointing to the relevant manual scenario in M1–M7. Log every `test.fixme()` to PROGRESS.md with a clear reason.
+6. **Manual-only scenarios M1–M7 do NOT get Playwright tests.** They're documented in E2E_SCENARIOS.md for human verification only.
+7. **Tier 2 / Tier 3 honesty rule.** If you can't reach Tier 2 in time, log a `⚠️ BLOCKER` listing the unimplemented scenario IDs and reason. Don't silently skip.
 
 **Special handling notes:**
 
@@ -221,7 +249,7 @@ Run `npm run dev`, click through quickly to verify the test IDs are reachable. R
    - Replace `waitForTimeout` with `waitForSelector` where possible (timing-based waits are the #1 flake source)
    - Add `clearStorage(page)` to `test.beforeEach` if state pollution detected
    - DO NOT mark a test `.skip` to "fix" it — debug it. If genuinely stuck, log a `⚠️ BLOCKER` in PROGRESS.md and continue.
-4. Goal: 15/15 scenarios pass on a single `npm run test:e2e` invocation, 3 runs in a row (manually verify by running 3x). Test titles match `Sx — <scenario title>` so failures are easy to map back to E2E_SCENARIOS.md.
+4. Goal: all mandatory scenarios (S1–S17 + S41 + S18–S40 Tier 1 = 29 total minimum) pass on a single `npm run test:e2e` invocation, 3 runs in a row (manually verify by running 3x). If Tier 2 was implemented, those must pass too. Test titles match `Sx — <scenario title>` so failures are easy to map back to E2E_SCENARIOS.md.
 5. If a test is genuinely flaky (passes 2/3): mark with `test.fixme()` (NOT `.skip`) and log the flake in PROGRESS.md with a reproduction note
 
 **Checkpoint:** `npm run test:e2e` passes 3 runs in a row. Log final test count to PROGRESS.md.
@@ -231,6 +259,7 @@ Run `npm run dev`, click through quickly to verify the test IDs are reachable. R
 ### Phase E6 — Document + final verify (15 min)
 
 1. Add to `README.md` a brief "End-to-end tests" section:
+
    ```markdown
    ## End-to-end tests
 
@@ -242,17 +271,19 @@ Run `npm run dev`, click through quickly to verify the test IDs are reachable. R
    First run requires `npx playwright install chromium` (~150MB download).
    Tests live in `tests/e2e/*.spec.ts`. Coverage: Build → Fill → Submit → PDF → CSV golden paths plus cycle-detection negative test.
    ```
+
 2. Run final verification suite:
    - `npm run typecheck` → must pass
    - `npm test -- --run` → must pass
    - `npm run test:e2e` → must pass
    - `npm run build` → must pass
 3. Append `## ✅ E2E COMPLETION SUMMARY` to PROGRESS.md with:
-   - E2E scenario count: 15/15 (or N + any `test.fixme()`d with reason)
-   - Total project test count: 277 unit + 15 E2E = 292+
-   - Any flaky tests marked `test.fixme()` with reason + scenario ID
+   - E2E scenario count: X mandatory (target 29) / Y Tier-2 done / Z Tier-3 done
+   - Total project test count: 343 unit + N E2E = ~370+ (depending on tier coverage)
+   - Any `test.fixme()`d scenarios with scenario ID + reason
+   - Any unimplemented Tier 2 / Tier 3 scenarios logged as `⚠️ BLOCKER` with reason
    - Time elapsed
-   - Confirmation that all 15 scenario titles in test files match `Sx — <title>` from E2E_SCENARIOS.md
+   - Confirmation that all implemented scenario titles in test files match `Sx — <title>` from E2E_SCENARIOS.md
 4. Stop. Don't wait for input.
 
 ---
@@ -269,21 +300,27 @@ Run `npm run dev`, click through quickly to verify the test IDs are reachable. R
 ## Stuck recovery protocol
 
 Same as CompletionPrompt:
+
 1. Try 3 different approaches (different selectors, different waits, different assertions)
 2. If still stuck → log `⚠️ BLOCKER` to PROGRESS.md with what you tried + what blocked
 3. Continue to next test. Don't stall the whole run.
 
 ## Estimated time
 
-E1: 10m + E2: 15m + E3: 30m + E4: 60m + E5: 30m + E6: 15m = **~2.7 hours of agent-clock**
+E1: 10m + E2: 15m + E3: 30m + E4: ~120m + E5: 45m + E6: 15m = **~3.75 hours of agent-clock for mandatory scope (29 scenarios)**
 
-Realistic range with debugging: **2.5–3.5 hours.** Faster than 2h is suspicious — likely missed test IDs, `.fixme()`'d scenarios without justification, or implemented fewer than 15 scenarios.
+- **Mandatory scope (29 scenarios):** 3–4 hours realistic with debugging
+- **Mandatory + Tier 2 (38 scenarios):** 4.5–5.5 hours
+- **Full coverage (41 scenarios):** 5–6.5 hours
+
+Faster than 2.5h is suspicious — likely missed test IDs, `.fixme()`'d scenarios without justification, or skipped Tier-1 mandatory scenarios.
 
 ## Final test count target
 
 Current state + this prompt:
-- 277 unit tests (existing — 115 engine + 162 from gap-fill G1–G8 + InstanceView portal fix retests)
-- 15 E2E scenarios (this prompt — S1–S15 from `E2E_SCENARIOS.md`, 1 Playwright `test()` per scenario)
-- **Total: 292 tests across unit + E2E**
 
-If `npm run test:e2e` reports fewer than 15 tests, something was skipped — check PROGRESS.md for `⚠️ BLOCKER` entries and `test.fixme()` markers.
+- **343 unit tests** (existing — 115 engine + 162 gap-fill + 26 toast/store/cascade additions + InstanceView portal fix retests + condition value editor fix tests)
+- **29+ E2E scenarios** (mandatory minimum: S1–S17 + S41 + S18–S40 Tier 1) → up to 41 if full coverage
+- **Total: ~372–384 tests across unit + E2E** depending on tier coverage
+
+If `npm run test:e2e` reports fewer than 29 tests, something mandatory was skipped — check PROGRESS.md for `⚠️ BLOCKER` entries and `test.fixme()` markers.

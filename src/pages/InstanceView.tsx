@@ -50,7 +50,7 @@ export function InstanceView() {
       )}
 
       {/* Screen region */}
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 py-8" data-testid="instance-view">
         <div className="flex items-center gap-3 mb-6">
           <Link to={`/templates/${instance.templateId}/instances`} className="text-gray-400 hover:text-gray-600 text-sm">
             ← Responses
@@ -61,6 +61,7 @@ export function InstanceView() {
         <div className="flex gap-3 mb-6">
           <button
             type="button"
+            data-testid="download-pdf"
             onClick={triggerPrint}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
           >

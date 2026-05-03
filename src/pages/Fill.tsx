@@ -147,7 +147,7 @@ export function Fill() {
         )}
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6" data-testid="fill-form">
         {template.fields.map((field) => {
           if (visibility[field.id] === false) return null;
 
@@ -158,6 +158,7 @@ export function Fill() {
           return (
             <div
               key={field.id}
+              data-testid={`field-${field.id}`}
               ref={(el) => { fieldRefs.current[field.id] = el; }}
               onBlur={() => handleBlur(field.id)}
             >
@@ -177,6 +178,7 @@ export function Fill() {
       <div className="mt-8">
         <button
           type="button"
+          data-testid="submit-form"
           onClick={handleSubmit}
           className="bg-blue-600 text-white px-6 py-2.5 rounded font-medium hover:bg-blue-700"
         >

@@ -221,3 +221,58 @@ Added bottom-right floating Dev Tools menu with Clear localStorage action. Confi
 - `npm run typecheck` — ✅ clean
 - `npm test -- --run` — ✅ 304/304 passing
 - `npm run build` — ✅ clean (333 kB bundle)
+
+---
+
+## 2026-05-03 16:32 — E2E Phase E1: Playwright install + config
+
+- `npm install -D @playwright/test` — installed v1.59.1
+- `npx playwright install chromium` — Chromium headless shell downloaded (~92 MB)
+- `playwright.config.ts` created at project root (baseURL=localhost:5173, headless, html reporter, webServer auto-start)
+- `package.json` — added `test:e2e`, `test:e2e:ui`, `test:e2e:debug` scripts
+- `.gitignore` — added `playwright-report/`, `test-results/`, `/tests/e2e/.auth/`
+- `vite.config.ts` — added `exclude: ['tests/e2e/**']` to Vitest config (prevents Vitest from picking up Playwright spec files)
+- Verified: `npx playwright --version` → 1.59.1; `npm run test:e2e -- --list` lists 0 tests cleanly
+
+## 2026-05-03 16:33 — E2E Phase E2: Test helpers
+
+- Created `tests/e2e/helpers.ts` with: `gotoHome`, `gotoNewBuilder`, `addField`, `setLabel`, `saveTemplate`, `clearStorage`
+- `clearStorage` navigates to app origin first if on `about:blank` (prevents SecurityError on localStorage access)
+
+## 2026-05-03 16:34 — E2E Phase E3: data-testid attributes added
+
+Added `data-testid` attributes to all required UI targets (non-behavioral change only):
+
+| Component | IDs added |
+|---|---|
+| TemplatesList | `templates-list`, `new-template-button`, `open-template-${id}`, `new-response-${id}`, `delete-template-${id}` |
+| Builder | `builder-canvas`, `add-field-${type}`, `canvas-field-${index}`, `config-label`, `save-template`, `save-error`, `template-title` |
+| Fill | `fill-form`, `field-${id}` (wrapper), `submit-form` — `field-error-${id}` already present in renderers |
+| InstanceView | `instance-view`, `download-pdf` |
+| InstancesList | `instances-list`, `instance-row-${id}`, `export-csv` |
+
+Unit tests: 343/343 passing after changes (data-testid is non-behavioral).
+
+## 2026-05-03 16:42 — E2E Phase E4 (batch 1): Scenarios S1–S10 implemented
+
+Implemented first 10 E2E scenarios across 4 spec files. All 10 pass 3/3 consecutive runs.
+
+### Files created
+- `tests/e2e/builder.spec.ts` — S1, S2, S7
+- `tests/e2e/instance.spec.ts` — S3, S4, S5
+- `tests/e2e/export.spec.ts` — S6
+- `tests/e2e/fill.spec.ts` — S8, S9, S10
+
+### Implementation notes
+- S3/S4/S5/S6: template injected via `page.evaluate(localStorage.setItem(...))` with fixed field IDs — avoids brittle builder-UI traversal for setup
+- S8: localStorage injection with fixed option IDs; `select_equals` condition stores option ID (not label) per the S17 bug fix
+- S5: `#print-region` asserted via `toBeAttached()` + `textContent()` — `window.print()` not called in headless
+- S6: CSV download captured via `page.waitForEvent('download')`, file read with `fs.readFile`, header + data row asserted
+- S9: localStorage injection for calc template; verified Total = 30 after A=10, B=20
+- S10: verified error appears on empty submit, clears on input, then submit succeeds
+- **Selector fixes discovered:** number config Min/Max inputs have no placeholder — use `div:has(> label:has-text("Min")) input[type="number"]`; text/number field values in disabled inputs need `toHaveValue`, not `toContainText`
+
+### Test counts
+- **10 E2E tests passing** (S1–S10)
+- **343 unit tests passing** (unchanged)
+- Total: **353 tests**

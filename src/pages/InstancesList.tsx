@@ -28,7 +28,7 @@ export function InstancesList() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8" data-testid="instances-list">
       <div className="flex items-center gap-3 mb-6">
         <Link to="/" className="text-gray-400 hover:text-gray-600 text-sm">← Forms</Link>
         <h1 className="text-2xl font-bold text-gray-900">{template.title} — Responses</h1>
@@ -44,6 +44,7 @@ export function InstancesList() {
         {templateInstances.length > 0 && (
           <button
             type="button"
+            data-testid="export-csv"
             onClick={handleExportCSV}
             className="border px-4 py-2 rounded hover:bg-gray-50 text-sm"
           >
@@ -59,7 +60,7 @@ export function InstancesList() {
       ) : (
         <ul className="space-y-3">
           {templateInstances.map((inst) => (
-            <li key={inst.id} className="border rounded-lg p-4 bg-white flex items-center justify-between">
+            <li key={inst.id} data-testid={`instance-row-${inst.id}`} className="border rounded-lg p-4 bg-white flex items-center justify-between">
               <div>
                 <div className="font-medium text-gray-900">Response #{inst.id.slice(-6)}</div>
                 <div className="text-xs text-gray-400 mt-0.5">

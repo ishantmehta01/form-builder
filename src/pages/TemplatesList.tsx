@@ -22,11 +22,12 @@ export function TemplatesList() {
   const list = Object.values(templates).sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8" data-testid="templates-list">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Forms</h1>
         <Link
           to="/templates/new"
+          data-testid="new-template-button"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
         >
           + New form
@@ -61,6 +62,7 @@ export function TemplatesList() {
                 <div className="flex gap-2">
                   <Link
                     to={`/templates/${t.id}/edit`}
+                    data-testid={`open-template-${t.id}`}
                     className="text-sm px-3 py-1.5 border rounded hover:bg-gray-50"
                   >
                     Edit
@@ -68,6 +70,7 @@ export function TemplatesList() {
                   {!isInvalid && (
                     <Link
                       to={`/templates/${t.id}/fill`}
+                      data-testid={`new-response-${t.id}`}
                       className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                       Fill
@@ -81,6 +84,7 @@ export function TemplatesList() {
                   </Link>
                   <button
                     type="button"
+                    data-testid={`delete-template-${t.id}`}
                     onClick={() => {
                       const instanceCount = responseCount;
                       const responsePart = instanceCount === 0
