@@ -147,10 +147,48 @@ No changes needed.
 - `npm run build` — ✅ clean (329 kB bundle)
 
 ### Blockers logged
-- ⚠️ aria-describedby not wired on field renderer inputs (G9 item 5c)
-- ⚠️ TemplatesList doesn't show instance count and delete confirmation doesn't mention instance count (G8 spec gap, not implemented)
+- ✅ RESOLVED (11:26) aria-describedby wired on field renderer inputs (G9 item 5c)
+- ✅ RESOLVED (11:26) TemplatesList delete confirmation now includes instance count with pluralization (G8 spec gap)
 
 ### What to review first
 1. `src/engine/instance.test.ts` — P1 calc-preserved-on-redownload test
 2. `src/fields/section_header/index.tsx` — semantic heading fix
 3. `src/pages/Fill.test.tsx` — hidden-field stripping and real-time calc tests
+
+## 2026-05-03 11:26 — Polish fixes (post gap-fill)
+
+### Fix 1: aria-describedby wired on all 7 field renderers
+
+Added to: `text`, `textarea`, `number`, `date`, `single_select`, `multi_select`, `file` renderers.
+
+Pattern applied:
+- Each renderer computes `const errorId = \`field-${field.id}-error\`;`
+- Input/interactive element gets `aria-describedby={errors.length > 0 ? errorId : undefined}`
+- Error container wrapped: `<div id={errorId} role="alert" data-testid={...}>` (only rendered when errors.length > 0)
+- Composite renderers: `single_select` tiles → `role="group"` + `aria-describedby` on container div; radio → `role="radiogroup"` + `aria-describedby` on container div; dropdown → on `<select>` directly. `multi_select` → `role="group"` + `aria-describedby` on checkbox container div.
+
+### Fix 2: Instance count in TemplatesList delete confirmation
+
+- `TemplatesList.tsx` now imports `useInstancesStore` and reads `instances`
+- Delete click handler computes `instanceCount = Object.values(instances).filter(i => i.templateId === t.id).length`
+- Message format:
+  - 0 instances: `Delete template 'Title'? This cannot be undone.`
+  - 1 instance: `Delete template 'Title'? 1 filled response will also be deleted. This cannot be undone.`
+  - N instances: `Delete template 'Title'? N filled responses will also be deleted. This cannot be undone.`
+
+### Tests added
+
+- 2 aria tests per affected renderer × 7 renderers = 14 new tests
+- `single_select` has 4 aria tests (2 display types: dropdown + radio)
+- 3 new instance-count confirm message tests in `TemplatesList.test.tsx`
+- **19 new tests total**
+
+### Test status
+- **20 test files**
+- **296 tests, 296 passing, 0 failing** (was 277)
+- Added: 19 new tests in this session
+
+### Typecheck + build
+- `npm run typecheck` — ✅ clean (0 errors)
+- `npm test -- --run` — ✅ 296/296 passing
+- `npm run build` — ✅ clean (331 kB bundle)
