@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTemplatesStore } from '@/stores/templates';
 import { useInstancesStore } from '@/stores/instances';
 import { useToastsStore } from '@/stores/toasts';
@@ -12,6 +12,11 @@ import type { ValidationError } from '@/types/condition';
 export function Fill() {
   const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // When the Fill route is reached via Builder's Preview button, location state
+  // carries { from: 'builder' } so the back link returns to the editor instead
+  // of the templates list. Direct visits / page refresh fall through to '/'.
+  const cameFromBuilder = (location.state as { from?: string } | null)?.from === 'builder';
   const { templates, invalidTemplateIds, loadFromStorage: loadTemplates } = useTemplatesStore();
   const { addInstance, loadFromStorage: loadInstances } = useInstancesStore();
   const pushToast = useToastsStore((s) => s.pushToast);
@@ -121,8 +126,25 @@ export function Fill() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/" className="text-gray-400 hover:text-gray-600 text-sm">← Forms</Link>
+        {cameFromBuilder && templateId ? (
+          <Link
+            to={`/templates/${templateId}/edit`}
+            data-testid="fill-back-link"
+            className="text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ← Back to editor
+          </Link>
+        ) : (
+          <Link to="/" data-testid="fill-back-link" className="text-gray-400 hover:text-gray-600 text-sm">
+            ← Forms
+          </Link>
+        )}
         <h1 className="text-2xl font-bold text-gray-900">{template.title}</h1>
+        {cameFromBuilder && (
+          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium" data-testid="preview-badge">
+            Preview
+          </span>
+        )}
       </div>
 
       <div className="space-y-6">

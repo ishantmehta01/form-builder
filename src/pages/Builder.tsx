@@ -418,6 +418,7 @@ export function Builder() {
           {existing && (
             <Link
               to={`/templates/${existing.id}/fill`}
+              state={{ from: 'builder' }}
               className="border px-3 py-1.5 rounded text-sm hover:bg-gray-50"
             >
               Preview
