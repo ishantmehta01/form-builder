@@ -9,11 +9,18 @@ const sizeMap: Record<SectionHeaderField['config']['size'], string> = {
   xl: 'text-2xl font-bold text-gray-900',
 };
 
+function headingTag(size: SectionHeaderField['config']['size']): 'h2' | 'h3' | 'h4' {
+  if (size === 'lg' || size === 'xl') return 'h2';
+  if (size === 'md') return 'h3';
+  return 'h4';
+}
+
 function SectionHeaderRenderer({ field }: Parameters<FieldTypeModule<SectionHeaderField>['renderer']>[0]) {
   const cls = sizeMap[field.config.size];
+  const Tag = headingTag(field.config.size);
   return (
     <div className="mt-4 mb-2 border-b pb-1">
-      <span className={cls}>{field.label}</span>
+      <Tag className={cls}>{field.label}</Tag>
     </div>
   );
 }
@@ -45,12 +52,15 @@ export const sectionHeaderFieldModule: FieldTypeModule<SectionHeaderField> = {
   renderer: SectionHeaderRenderer,
   configEditor: SectionHeaderConfigEditor,
   validator: () => [],
-  pdfRenderer: (field) => (
-    <div className="print-section-header border-b pb-1 mt-4 mb-2">
-      <span className={`font-bold ${field.config.size === 'xl' || field.config.size === 'lg' ? 'text-lg' : 'text-base'}`}>
-        {field.label}
-      </span>
-    </div>
-  ),
+  pdfRenderer: (field) => {
+    const Tag = headingTag(field.config.size);
+    return (
+      <div className="print-section-header border-b pb-1 mt-4 mb-2">
+        <Tag className={`font-bold ${field.config.size === 'xl' || field.config.size === 'lg' ? 'text-lg' : 'text-base'}`}>
+          {field.label}
+        </Tag>
+      </div>
+    );
+  },
   csvSerializer: () => '',
 };
