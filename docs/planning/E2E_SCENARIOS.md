@@ -24,12 +24,14 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Navigate to `/`
 2. Click "New Template"
 3. In the title input, type `My First Form`
 4. Click Save
 
 **Expected:**
+
 - Redirected to templates list (URL = `/`)
 - A card titled `My First Form` appears with field count = 0
 
@@ -40,6 +42,7 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Navigate to `/templates/new`
 2. Title = `Contact Form`
 3. Add a Text field, set label = `Name`
@@ -47,6 +50,7 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 5. Click Save
 
 **Expected:**
+
 - Template "Contact Form" appears in list with field count = 2
 
 ---
@@ -56,12 +60,14 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** Template from S2 exists.
 
 **Steps:**
+
 1. From templates list, click "New Response" on `Contact Form`
 2. Type `Alice` in Name
 3. Type `30` in Age
 4. Click Submit
 
 **Expected:**
+
 - Redirected to instance view (URL = `/instances/<id>`)
 - Page shows `Alice` and `30` for the two fields
 - Submission timestamp visible
@@ -73,10 +79,12 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** Instance from S3 exists.
 
 **Steps:**
+
 1. Navigate to `/templates/<contactFormId>/instances`
 2. Click the instance row
 
 **Expected:**
+
 - Instance view loads
 - Same content as in S3
 
@@ -87,15 +95,17 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** Instance from S3 exists. Open instance view.
 
 **Steps:**
+
 1. Click "Download PDF" button (or Cmd+P)
 2. Browser print preview opens
 
 **Expected:**
+
 - Print preview shows form title `Contact Form`
 - "Submitted: <timestamp>" line visible
 - `Name: Alice` and `Age: 30` visible
 - No screen-only UI (header nav, buttons) appears in preview
-- *Manual only:* layout looks like a real form, not a debug dump
+- _Manual only:_ layout looks like a real form, not a debug dump
 
 **Playwright assertion:** `#print-region` exists in `document.body`, contains `Contact Form`, `Alice`, `30`. (Cannot assert print preview opens in headless.)
 
@@ -106,13 +116,15 @@ These six scenarios cover the core happy path. If all six pass, the basic produc
 **Preconditions:** At least 1 instance exists for `Contact Form`.
 
 **Steps:**
+
 1. Navigate to `/templates/<contactFormId>/instances`
 2. Click "Export CSV"
 
 **Expected:**
+
 - File downloads (browser download notification)
-- *Manual:* open in Sheets — header row = `Name, Age` (or `Submitted At, Name, Age` if meta columns included); data row = `Alice, 30`
-- *Playwright:* capture download via `page.waitForEvent('download')`, parse CSV content, assert header + row content
+- _Manual:_ open in Sheets — header row = `Name, Age` (or `Submitted At, Name, Age` if meta columns included); data row = `Alice, 30`
+- _Playwright:_ capture download via `page.waitForEvent('download')`, parse CSV content, assert header + row content
 
 ---
 
@@ -125,6 +137,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Navigate to `/templates/new`
 2. Title = `Cycle Test`
 3. Add Text field A, label = `A`
@@ -134,6 +147,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 7. Click Save
 
 **Expected:**
+
 - Save blocked
 - Inline error visible containing the words "loop" or "cycle" (case-insensitive)
 - Template NOT in templates list (navigate to `/`, confirm empty)
@@ -145,6 +159,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template `Conditional Demo`:
    - Field A: Single Select with options `Yes`, `No`, default visible
    - Field B: Text, label `Reason`, hidden by default, **show** if A equals `Yes`
@@ -157,6 +172,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 8. **Assert:** B becomes hidden immediately
 
 **Expected:**
+
 - B's visibility tracks A's value in real time
 - Toggling A back and forth works without page reload
 
@@ -167,6 +183,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template `Calc Demo`:
    - Number A
    - Number B
@@ -179,6 +196,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 6. Type C = 30 → assert Total = 60
 
 **Expected:**
+
 - Calc updates within ~100ms of typing
 - B2-dropped behavior confirmed: even when C was hidden in step 3-4, if C had a value it would still count (covered more directly in unit tests; this scenario covers the live-update path)
 
@@ -189,6 +207,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** Template `Required Demo` with one required Text field.
 
 **Steps:**
+
 1. Open New Response
 2. Without typing anything, click Submit
 3. **Assert:** validation error appears below the field (red, contains "required" or similar); not redirected
@@ -198,6 +217,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 7. **Assert:** instance created
 
 **Expected:**
+
 - Submit button doesn't redirect when invalid
 - Error appears under the field (not in a top-of-form summary)
 - Error clears as soon as input is valid
@@ -209,10 +229,12 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** Template with field B that is required AND hidden by default (no triggering condition).
 
 **Steps:**
+
 1. Open New Response — B is hidden
 2. Click Submit (form is otherwise valid)
 
 **Expected:**
+
 - Submit succeeds (no validation error for B even though required)
 - Instance created
 - B not present in instance.values
@@ -226,6 +248,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** Template `Privacy Demo` with one always-visible field `Public` and one always-hidden field `Secret`.
 
 **Steps:**
+
 1. Try to fill — `Secret` is hidden, can only fill `Public`
 2. Submit → instance
 3. View instance → `Public` shown, `Secret` not shown
@@ -233,6 +256,7 @@ These are the tests that prove the rubric criteria — conditional logic correct
 5. Export CSV → `Secret` column either absent (if never filled in any instance snapshot) or has empty cell for hidden fields
 
 **Expected:**
+
 - Hidden fields invisible in instance view, PDF, CSV — three layers all consistent
 
 ---
@@ -242,12 +266,14 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** Template with one optional Text field.
 
 **Steps:**
+
 1. Fill nothing
 2. Submit (passes because field is optional)
 3. View instance → field label shown with `—` placeholder
 4. Cmd+P → print preview shows label with `—`
 
 **Expected:**
+
 - Distinguishable from hidden: hidden = absent entirely, visible-empty = label + dash
 
 ---
@@ -255,15 +281,18 @@ These are the tests that prove the rubric criteria — conditional logic correct
 ## S14 — Section Header uses semantic heading levels (H4)
 
 **Preconditions:** Template `Headings Demo`:
+
 - Section Header `Big`, size = XL
 - Section Header `Med`, size = M
 - Section Header `Small`, size = XS
 
 **Steps:**
+
 1. Open New Response
 2. Inspect DOM (DevTools)
 
 **Expected:**
+
 - `Big` rendered as `<h2>` (XL → h2 per H4 decision)
 - `Med` rendered as `<h3>` (M → h3)
 - `Small` rendered as `<h4>` (XS → h4)
@@ -278,12 +307,14 @@ These are the tests that prove the rubric criteria — conditional logic correct
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Navigate to `/templates/new`
 2. Add Number field `A`
 3. Add Calculation `Total` with sources = [A] only
 4. Click on `Total` to view config
 
 **Expected:**
+
 - Inline warning visible near the source list, containing text like "single source" or "may expose source value" or "consider hiding"
 - Warning does NOT appear when calc has 2+ sources OR when the single source is not hideable
 
@@ -312,6 +343,7 @@ Run axe browser extension on Builder, Fill, InstanceView pages. Should report 0 
 ## M5 — DnD reorder preserves field configuration (manual only)
 
 Drag a field with conditions and calc-source membership to a new position on the canvas. After drop, verify:
+
 - The dragged field's conditions still resolve to their target IDs (not broken by the reorder)
 - Calc fields that referenced the dragged field still aggregate correctly
 - `conditionLogic`, `defaultVisible`, `defaultRequired` all preserved
@@ -323,6 +355,7 @@ DnD must be a pure array reorder, not a destructive operation that nullifies fie
 ## M6 — Long answer wraps in PDF, doesn't truncate (K4)
 
 Fill a Multi-line Text field with 500+ characters of mixed content (multi-paragraph). Submit. Open instance, click Download PDF. In print preview verify:
+
 - Text wraps to multiple lines (no `…` truncation)
 - `page-break-inside: avoid` keeps label + value on the same page when possible
 - Long single words break with `word-wrap: break-word`
@@ -334,6 +367,7 @@ Visual-only — Playwright in headless can assert print-region content but can't
 ## M7 — Screen reader announces error on focus (M2 baseline)
 
 Use VoiceOver (Mac) or NVDA (Windows) with the dev server open. After a failed submit:
+
 - Tab to the first errored field
 - Screen reader should announce: field label + "required" or specific validation message
 - Without the `aria-describedby` wiring (PolishFixes), the error would be invisible to screen reader users despite being visible on screen
@@ -367,6 +401,7 @@ These were discovered during manual smoke testing AFTER S1–S15 were specified.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template `T1` (any field), save
 2. Build template `T2` (any field), save
 3. Open `T1` → New Response → fill + submit (creates instance `I1`)
@@ -377,6 +412,7 @@ These were discovered during manual smoke testing AFTER S1–S15 were specified.
 8. Click Confirm
 
 **Expected:**
+
 - `T1` no longer in templates list
 - `T2` still in templates list
 - Navigate to `T2`'s instances list → `I3` still present
@@ -384,11 +420,12 @@ These were discovered during manual smoke testing AFTER S1–S15 were specified.
 - No orphans persist after a page reload
 
 **Playwright assertion:** after delete, read storage directly and assert exact instance IDs:
+
 ```ts
 const stored = await page.evaluate(() =>
-  JSON.parse(localStorage.getItem('formBuilder')!)
+  JSON.parse(localStorage.getItem("formBuilder")!),
 );
-expect(Object.keys(stored.instances)).toEqual(['I3']);
+expect(Object.keys(stored.instances)).toEqual(["I3"]);
 ```
 
 **Maps to spec file:** `tests/e2e/builder.spec.ts` (templates-list flow). One Playwright `test()` titled `S16 — Deleting a template cascades to its filled responses (D3)`.
@@ -402,6 +439,7 @@ expect(Object.keys(stored.instances)).toEqual(['I3']);
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template `Conditional Demo`:
    - Field A: Single Select with options `Yes`, `No`, defaultVisible=true
    - Field B: Text, label `Reason`, defaultVisible=false
@@ -415,11 +453,13 @@ expect(Object.keys(stored.instances)).toEqual(['I3']);
 9. Pick `No` → **B becomes hidden immediately**
 
 **Expected:**
+
 - Step 3: value editor renders as a dropdown with options "Yes" / "No" (not a text input)
 - Stored condition value is the option's UUID, not the label string
 - B's visibility tracks A's value in real time
 
 **Negative test (regression guard):**
+
 - Authoring with `number_within_range` shows two `min`/`max` number inputs (not a single text field)
 - Authoring with `multi_contains_any` shows checkboxes for each target option
 - Authoring with `date_before` shows a `<input type="date">`
@@ -444,6 +484,7 @@ Tests deep effective-value stripping. A→B→C→D, each reveals the next via a
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template `Cascade Test`:
    - A: Single Select (`Yes` / `No`), defaultVisible=true
    - B: Text "Reason", defaultVisible=false, **show if A=Yes**
@@ -470,6 +511,7 @@ Tests the dependency edge from calc value → condition graph. Calcs are conditi
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A: Number, defaultVisible=true
    - B: Number, defaultVisible=true
@@ -495,6 +537,7 @@ The make-or-break A2 rule. Without this guard, every form with a default-hidden 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A: Text "Name", required, defaultVisible=true
    - B: Text "Reason", required, defaultVisible=false, no triggering condition (perma-hidden)
@@ -503,6 +546,7 @@ The make-or-break A2 rule. Without this guard, every form with a default-hidden 
 4. Click Submit (don't fill B because the UI doesn't render it)
 
 **Expected:**
+
 - Submit succeeds
 - Instance created with `values: { A: "Alice" }`, no `B` value
 - `instance.visibility.B === false`
@@ -510,8 +554,11 @@ The make-or-break A2 rule. Without this guard, every form with a default-hidden 
 - Toast: "Response submitted"
 
 **Playwright assertion:**
+
 ```ts
-const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('formBuilder')!));
+const stored = await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("formBuilder")!),
+);
 const inst = Object.values(stored.instances)[0] as any;
 expect(inst.visibility.B).toBe(false);
 expect(inst.values.B).toBeUndefined();
@@ -528,6 +575,7 @@ Tests A1 cross-effect precedence in the real DOM (not just engine units).
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A: Single Select (`Yes` / `No`)
    - B: Single Select (`Yes` / `No`)
@@ -553,6 +601,7 @@ Tests A1 conditionLogic scoping (per-effect-group, not global across all conditi
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A: Single Select (Yes / No)
    - B: Single Select (Yes / No)
@@ -575,11 +624,13 @@ Tests that empty groups must NOT fire via vacuous truth. Without the `length > 0
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template with one Text field "X", **zero conditions**, conditionLogic=AND, defaultVisible=true
 2. Save → New Response
 3. Inspect X's visibility
 
 **Expected:**
+
 - X is **visible**
 - Empty Show + empty Hide groups are both inactive; default applies
 - Without the guard, `[].every(x => x) === true` would make every effect group fire, and Hide-wins precedence would hide every field on initial load
@@ -597,6 +648,7 @@ Distinguishes "no answer" from "answer is zero." H5 + B1 rule combined.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A, B, C: Number, defaultVisible=true (all optional)
    - Total: Calc `sum(A, B, C)`, decimalPlaces=0
@@ -604,6 +656,7 @@ Distinguishes "no answer" from "answer is zero." H5 + B1 rule combined.
 3. Inspect Total field renderer
 
 **Expected:**
+
 - Total displays `—` (em dash), NOT `0`
 - Submit form (all fields optional → submission succeeds)
 - `instance.values.Total` is undefined (per H5 + B1: skip empty sources, no valid sources → omit)
@@ -621,12 +674,14 @@ Tests that the builder UX surfaces the leakage advisory documented in B2.
 **Preconditions:** localStorage clear, in Builder.
 
 **Steps:**
+
 1. Add Number field "Salary"
 2. Add Calculation field, set sources=[Salary] (single source)
 3. Inspect calc config panel
 4. Add a second Number source and re-inspect
 
 **Expected:**
+
 - Step 3: inline warning visible near the source list — text contains "single source" or "may expose" or "consider hiding the calc"
 - Step 4: warning disappears after a second source is added (multi-source mitigates the most extreme leakage)
 
@@ -641,6 +696,7 @@ The surprising-but-correct A6 rule. The displayed value is the rounded version; 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - Score: Number, decimalPlaces=0
    - Bonus: Text "Bonus", defaultVisible=false, **show if Score > 99.9**
@@ -651,6 +707,7 @@ The surprising-but-correct A6 rule. The displayed value is the rounded version; 
 6. Inspect Bonus visibility
 
 **Expected:**
+
 - Step 4: Bonus is **hidden** (raw 99.9 is NOT > 99.9, even though display shows `100`)
 - Step 6: Bonus is **visible** (raw 100 > 99.9)
 
@@ -665,6 +722,7 @@ Tests output formatting beyond raw math. Floating-point can produce `6.600000000
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template:
    - A, B, C: Number, decimalPlaces=1
    - Total: Calc `sum`, decimalPlaces=2
@@ -672,6 +730,7 @@ Tests output formatting beyond raw math. Floating-point can produce `6.600000000
 3. Inspect Total
 
 **Expected:**
+
 - Total displays `6.60` (decimalPlaces=2 formatting)
 - NOT `6.6000000000000005` (raw float toString)
 
@@ -688,6 +747,7 @@ Without snapshot semantics, schema evolution would break history. Old instances 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template "Survey" with one field "Email"
 2. Save → fill → submit instance I1
 3. Edit "Survey": rename "Email" to "Contact", add new field "Phone"
@@ -696,6 +756,7 @@ Without snapshot semantics, schema evolution would break history. Old instances 
 6. View I2 → labels show "Contact" + "Phone" (new schema)
 
 **Expected:**
+
 - I1's `templateSnapshot.fields[0].label === "Email"` (old name)
 - I2's `templateSnapshot.fields[0].label === "Contact"`, has Phone field
 - Both render correctly against their own snapshot
@@ -714,10 +775,12 @@ Tests union-of-snapshots header reconciliation when labels change across version
 **Preconditions:** Same setup as S28 (two instances, evolved template).
 
 **Steps:**
+
 1. Open InstancesList for "Survey"
 2. Click Export CSV → capture download
 
 **Expected:**
+
 - Header includes "Contact" (latest label across snapshots), NOT "Email"
 - I1's row populates the "Contact" column with its old "Email" data (same field ID, latest label wins)
 - I2's row populates "Contact" with its own data
@@ -736,6 +799,7 @@ Tests the "don't drop history" rule from G1.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template T with fields A, B
 2. Submit instance I1 (both filled)
 3. Edit T → remove field B
@@ -743,6 +807,7 @@ Tests the "don't drop history" rule from G1.
 5. Export CSV
 
 **Expected:**
+
 - Header has both A and B columns (B comes from I1's snapshot which still includes it)
 - I1's row populates both A and B
 - I2's B cell is empty (B not in I2's snapshot)
@@ -761,6 +826,7 @@ Tests displayType is presentation-only, not data-shape. Selecting "Blue" via rad
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build three templates differing ONLY in displayType:
    - T-radio: Single Select (Red, Blue, Green), displayType=`radio`
    - T-dropdown: same options, displayType=`dropdown`
@@ -770,6 +836,7 @@ Tests displayType is presentation-only, not data-shape. Selecting "Blue" via rad
 4. Read each instance's `values`
 
 **Expected:**
+
 - All three instances have `values: { color: "<id-of-blue>" }`
 - Same option ID stored regardless of how UI presented the options
 - Per-instance UI differs (visually radio/dropdown/tiles) but data shape is identical
@@ -785,6 +852,7 @@ Tests tile-display a11y baseline.
 **Preconditions:** localStorage clear, template with tiles-displayType Single Select.
 
 **Steps:**
+
 1. Open Fill mode
 2. Tab into the tile group → first tile receives focus (focus-visible style)
 3. Press `ArrowRight` → focus moves to next tile
@@ -801,13 +869,14 @@ Tests tile-display a11y baseline.
 
 ## File field — metadata-only enforcement
 
-### S33 — File max_files boundary + allowedTypes case-insensitive (Tier 2)
+### S33 [Not automated] — File max_files boundary + allowedTypes case-insensitive (Tier 2)
 
 Tests file validator edge cases per L1/L3 + decision-log file rules.
 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template with File field, `maxFiles=2`, `allowedTypes=['.pdf']`
 2. Save → New Response
 3. Attach `report.PDF` (uppercase ext) → **accepted** (case-insensitive match)
@@ -816,6 +885,7 @@ Tests file validator edge cases per L1/L3 + decision-log file rules.
 6. Attempt to attach `image.jpg` (with maxFiles still at 1 of 2 used) → **blocked** with allowed-types error
 
 **Expected:**
+
 - Case-insensitive extension matching (REPORT.PDF matches .pdf)
 - maxFiles enforced at boundary (3rd attachment rejected)
 - Per-error message specifies which rule fired (max_files vs allowed_types)
@@ -834,11 +904,13 @@ Tests load-time cycle re-validation per §2.
 **Preconditions:** localStorage clear. Need access to the DevTools dock OR `page.evaluate` to inject malformed data.
 
 **Steps:**
+
 1. Inject a template with a condition cycle directly into localStorage. Example payload (simplified): two fields A, B, where A has `show if B=x` and B has `show if A=y` — produces A→B→A cycle when `findCycle` runs at load.
 2. Reload page (or trigger `loadFromStorage`)
 3. Open templates list
 
 **Expected:**
+
 - Template card shows quarantine badge: "⚠ Invalid conditional logic — open in builder to fix. New responses disabled."
 - "New Response" button disabled
 - Click "Edit" → builder opens, surfaces the cycle inline so user can fix
@@ -856,10 +928,12 @@ Tests load-time defensive guards for forward-compat mismatch per §5.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Inject `{ version: 999, templates: {}, instances: {} }` into localStorage
 2. Reload page
 
 **Expected:**
+
 - App shows error UI / fallback ("Newer data version detected — please update")
 - Doesn't crash
 - Doesn't silently corrupt or downgrade data
@@ -875,10 +949,12 @@ Tests load-time JSON parse failure recovery per §5.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Inject `formBuilder = "{ this isn't json"` (raw broken JSON)
 2. Reload page
 
 **Expected:**
+
 - App opens to empty templates list
 - No error toast, no crash, no white-screen-of-death
 - Console has logged warning per D1 fail-quiet rule
@@ -889,18 +965,20 @@ Tests load-time JSON parse failure recovery per §5.
 
 ## Real-world misuse — adversarial input
 
-### S37 — Pasting formatted text into a Text field strips formatting (Tier 3)
+### S37 [Not automated]— Pasting formatted text into a Text field strips formatting (Tier 3)
 
 Tests browser-native paste handling. Users paste from Word/web all the time.
 
 **Preconditions:** localStorage clear, template with Text field.
 
 **Steps:**
+
 1. Open Fill mode
 2. Set clipboard to rich-text content (HTML markup or RTF)
 3. Paste into Text field
 
 **Expected:**
+
 - Stored value is plain text (no HTML, no formatting markup)
 - React's `<input type="text">` and `<textarea>` strip formatting natively
 - Submitted value matches what's visible in the input
@@ -918,6 +996,7 @@ Tests escaping across the entire data path: storage → render → PDF → CSV.
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template with field labeled `Order #1, "priority" <test>`
 2. Save → reload page → reopen builder
 3. Open Fill mode → fill any value → submit
@@ -925,6 +1004,7 @@ Tests escaping across the entire data path: storage → render → PDF → CSV.
 5. Export CSV
 
 **Expected:**
+
 - Builder, Fill, Instance view all render the label correctly (no HTML injection, no double-escaping)
 - PDF print region shows label correctly
 - CSV header column escapes per RFC 4180: `"Order #1, ""priority"" <test>"`
@@ -941,6 +1021,7 @@ Tests routing state consistency. Users hit Back/Forward without thinking; pages 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template, save (URL: `/templates/:id/edit`)
 2. Click Preview (URL: `/templates/:id/fill`, with `state.from = 'builder'`)
 3. Fill, submit (URL: `/instances/:id`)
@@ -948,6 +1029,7 @@ Tests routing state consistency. Users hit Back/Forward without thinking; pages 
 5. Browser forward button
 
 **Expected:**
+
 - No "Cannot read property of undefined" errors in console
 - Each page rehydrates correctly with its data
 - Stores re-load from localStorage on each navigation
@@ -959,13 +1041,14 @@ Tests routing state consistency. Users hit Back/Forward without thinking; pages 
 
 ## Stress / performance
 
-### S40 — Form with 50 fields renders without performance issue (Tier 3)
+### S40 [Not automated] — Form with 50 fields renders without performance issue (Tier 3)
 
 Tests engine + UI scale. Catches O(n²) issues hidden at small N.
 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Programmatically build a template with 50 fields including:
    - 10 conditional dependencies (mixed Show/Hide effects across various target types)
    - 5 calculations referencing different sources
@@ -974,12 +1057,14 @@ Tests engine + UI scale. Catches O(n²) issues hidden at small N.
 3. Type a value into the first field
 
 **Expected:**
+
 - Initial fill-mode render < 200ms (measured via `performance.now()` before/after)
 - Each value change propagates within ~16ms (60fps target)
 - Engine `evaluate()` call < 5ms even at this size
 - No "long task" warnings via `PerformanceObserver`
 
 **Playwright assertion:**
+
 ```ts
 const t = await page.evaluate(() => {
   const start = performance.now();
@@ -995,11 +1080,12 @@ expect(t).toBeLessThan(50);
 
 ### S41 — Preview with unsaved changes prompts confirm dialog (Tier 1)
 
-**Bug surfaced 2026-05-03:** clicking Preview with unsaved changes silently navigated to the *last saved* template — not the in-memory canvas state — leaving the user confused why their latest edits didn't appear in preview. Fix: explicit confirm dialog ("Save & preview") that runs the full save flow (including cycle validation) before navigating. Cancel button preserves edits in builder. UX option B from the design discussion.
+**Bug surfaced 2026-05-03:** clicking Preview with unsaved changes silently navigated to the _last saved_ template — not the in-memory canvas state — leaving the user confused why their latest edits didn't appear in preview. Fix: explicit confirm dialog ("Save & preview") that runs the full save flow (including cycle validation) before navigating. Cancel button preserves edits in builder. UX option B from the design discussion.
 
 **Preconditions:** localStorage clear.
 
 **Steps:**
+
 1. Build template "Survey", add one field "Email", save → templates list shows "Survey, 1 field"
 2. Click Edit on "Survey" to re-enter Builder
 3. Add a new field "Phone" — `Unsaved changes` indicator appears
@@ -1011,6 +1097,7 @@ expect(t).toBeLessThan(50);
 9. Preview shows BOTH "Email" AND "Phone" fields (latest state)
 
 **Expected:**
+
 - Preview button does NOT navigate when dirty without confirmation
 - Cancel preserves builder state, never persists
 - Save & preview persists + navigates only if save succeeds (cycle blocks save → blocks navigation)
@@ -1019,6 +1106,7 @@ expect(t).toBeLessThan(50);
 - Cancel button is auto-focused for safety (avoid accidental save)
 
 **Negative test (regression guard):**
+
 - Build with cycle → click Preview → click Save & preview → save fails (cycle detected) → dialog closes, navigation blocked, inline cycle error visible in builder, error toast shown
 
 **Maps to:** `tests/e2e/builder.spec.ts`. One Playwright `test()` titled `S41 — Preview with unsaved changes prompts confirm dialog`.
