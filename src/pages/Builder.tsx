@@ -135,6 +135,9 @@ function ConditionEditor({
   onChange: (f: Field) => void;
 }) {
   const targets = allFields.filter((f) => f.id !== field.id);
+  const conditionTargets = targets.filter(
+    (target) => registry[target.type].operators.length > 0,
+  );
 
   return (
     <div className="space-y-3">
@@ -205,7 +208,7 @@ function ConditionEditor({
                 }}
               >
                 <option value="">— pick field —</option>
-                {targets.map((t) => (
+                {conditionTargets.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label || "(untitled)"}
                   </option>
@@ -424,7 +427,7 @@ function ConditionEditor({
         type="button"
         className="text-blue-600 text-xs"
         onClick={() => {
-          const firstTarget = targets[0];
+          const firstTarget = conditionTargets[0];
           if (!firstTarget) return;
           const op = registry[firstTarget.type].operators[0];
           if (!op) return;
@@ -682,7 +685,9 @@ export function Builder() {
         />
         <div className="flex gap-2 items-center">
           {saveError && (
-            <span data-testid="save-error" className="text-red-600 text-xs">{saveError}</span>
+            <span data-testid="save-error" className="text-red-600 text-xs">
+              {saveError}
+            </span>
           )}
           {isDirty && (
             <span className="text-amber-500 text-xs">Unsaved changes</span>
@@ -743,7 +748,10 @@ export function Builder() {
         </div>
 
         {/* Center — sortable canvas */}
-        <div className="flex-1 p-4 overflow-y-auto" data-testid="builder-canvas">
+        <div
+          className="flex-1 p-4 overflow-y-auto"
+          data-testid="builder-canvas"
+        >
           {fields.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400">
               <p>Add fields from the left panel</p>

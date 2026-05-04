@@ -152,3 +152,62 @@ describe('Builder — field deletion with dependents', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('Builder — conditions', () => {
+  it('add condition skips target fields without operators', async () => {
+    const template: Template = {
+      id: 't-conditions',
+      title: 'Conditions',
+      createdAt: '2026-01-01T00:00:00Z',
+      modifiedAt: '2026-01-01T00:00:00Z',
+      fields: [
+        {
+          id: 'f-with-condition',
+          type: 'text',
+          label: 'Reason',
+          conditions: [],
+          conditionLogic: 'OR',
+          defaultVisible: true,
+          defaultRequired: false,
+          config: {},
+        },
+        {
+          id: 'f-file',
+          type: 'file',
+          label: 'Attachment',
+          conditions: [],
+          conditionLogic: 'OR',
+          defaultVisible: true,
+          defaultRequired: false,
+          config: { allowedTypes: [], maxFiles: 1 },
+        },
+        {
+          id: 'f-text',
+          type: 'text',
+          label: 'Status',
+          conditions: [],
+          conditionLogic: 'OR',
+          defaultVisible: true,
+          defaultRequired: false,
+          config: {},
+        },
+      ],
+    };
+
+    makeStore({ templates: { 't-conditions': template } });
+    renderBuilder('t-conditions');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('canvas-field-0'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /\+ add condition/i }));
+    });
+
+    expect(screen.getByRole('button', { name: /remove condition/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Status')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /attachment/i })).not.toBeInTheDocument();
+  });
+
+});
