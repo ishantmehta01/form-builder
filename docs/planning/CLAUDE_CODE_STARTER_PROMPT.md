@@ -1,6 +1,6 @@
 # Claude Code — Starter Prompt
 
-> Copy everything below the `---` line into your first message in a Claude Code session running in this folder. The two reference files (`assignment.pdf` and `decision-log.md`) are already here.
+> Copy everything below the `---` line into your first message in a Claude Code session running in this folder. The two reference files (`requirements.pdf` and `decision-log.md`) are already here.
 
 ---
 
@@ -12,7 +12,7 @@ Principal Engineer, 11+ years frontend (React/TS, design systems, Storybook, Pla
 
 ## The assignment
 
-Read `assignment.pdf` first. Short version: a browser-based form builder with two modes (Builder + Fill), 10 field types, conditional logic, calculation fields, browser-native PDF export, localStorage persistence. React + TypeScript, no `any`, no third-party PDF libraries.
+Read `requirements.pdf` first. Short version: a browser-based form builder with two modes (Builder + Fill), 10 field types, conditional logic, calculation fields, browser-native PDF export, localStorage persistence. React + TypeScript, no `any`, no third-party PDF libraries.
 
 ## The plan
 
@@ -44,7 +44,7 @@ The assignment also requires an `AI_USAGE_LOG.md` — 5–7 well-described promp
 
 ## What I want you to do FIRST (do not write code yet)
 
-**Phase 0 — Plan review.** Read `assignment.pdf` and `decision-log.md`. Then come back with:
+**Phase 0 — Plan review.** Read `requirements.pdf` and `decision-log.md`. Then come back with:
 
 1. **Gaps** — decisions that should have been made but weren't, especially around the rubric's grading axes
 2. **Risks** — places where the plan might break under real implementation (e.g., a decision that sounds clean in prose but creates a hard problem in code)

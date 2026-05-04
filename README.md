@@ -32,7 +32,7 @@ localStorage['formBuilder'] = {
 
 The engine runs `evaluate(rawValues, template, registry) → { computedValues, visibility, required }` in two passes.
 
-**Pass 1** computes all calculation fields from raw values (no visibility filtering — see B2 below). **Pass 2** evaluates conditions in topological order over the condition dependency graph (edges: `target → owner`). The key correctness property: when a field becomes hidden, its entry is deleted from the `effectiveValues` map *before* downstream fields are processed. Without this stripping, a field hidden upstream (e.g., B) could still satisfy a downstream condition via its preserved-but-hidden value, leaving the downstream field (C) incorrectly visible. This cascade bug was caught in review and the fix — topological iteration with effective-value stripping — is the headline engine correctness property.
+**Pass 1** computes all calculation fields from raw values (no visibility filtering — see B2 below). **Pass 2** evaluates conditions in topological order over the condition dependency graph (edges: `target → owner`). The key correctness property: when a field becomes hidden, its entry is deleted from the `effectiveValues` map _before_ downstream fields are processed. Without this stripping, a field hidden upstream (e.g., B) could still satisfy a downstream condition via its preserved-but-hidden value, leaving the downstream field (C) incorrectly visible. This cascade bug was caught in review and the fix — topological iteration with effective-value stripping — is the headline engine correctness property.
 
 Cycles are blocked at builder save time and re-validated on storage load. The engine still defends as a last resort: if `topologicalSort` detects a cycle, it logs and returns all-default visibility/required without throwing.
 
@@ -62,11 +62,11 @@ PDF export calls `window.print()` with `@media print` CSS that hides everything 
 
 ### 6. AND/OR logic is per-effect-group with deterministic precedence
 
-A field's `conditionLogic` (AND or OR) applies *within* each effect group separately. A field with two Show conditions and one Hide condition uses `conditionLogic` to combine the Shows; the single Hide is its own group. Cross-effect precedence: Hide > Show, Not-Required > Required. Empty groups are inactive — `[].every(x => x) === true` is guarded with `arr.length > 0 && combine(arr)` to prevent vacuous Hide from hiding every field on initial load.
+A field's `conditionLogic` (AND or OR) applies _within_ each effect group separately. A field with two Show conditions and one Hide condition uses `conditionLogic` to combine the Shows; the single Hide is its own group. Cross-effect precedence: Hide > Show, Not-Required > Required. Empty groups are inactive — `[].every(x => x) === true` is guarded with `arr.length > 0 && combine(arr)` to prevent vacuous Hide from hiding every field on initial load.
 
 ### 7. Operator semantics: absent values are uniformly false
 
-When a condition's target is absent from `effectiveValues` (never answered, or hidden upstream), all comparison operators return `false` — including `not_equals` and `multi_contains_none`. The user-facing principle: *unanswered fields don't trigger logic; defaults apply.* This keeps AND/OR combination simple (no third "skip" state) and matches builder intuition.
+When a condition's target is absent from `effectiveValues` (never answered, or hidden upstream), all comparison operators return `false` — including `not_equals` and `multi_contains_none`. The user-facing principle: _unanswered fields don't trigger logic; defaults apply._ This keeps AND/OR combination simple (no third "skip" state) and matches builder intuition.
 
 ## What I'd do with more time
 
@@ -77,14 +77,15 @@ When a condition's target is absent from `effectiveValues` (never answered, or h
 - **Richer PDF:** running headers and "Page X of Y" in Safari require JavaScript-injected per-page divs and `ResizeObserver`, which is a significant spike. Skipped per K2.
 - **Accessibility:** labels and `aria-required` are wired, but keyboard navigation of tiles/drag-and-drop and error announcement via `aria-live` need deeper testing with a screen reader.
 - **Performance:** engine re-runs on every keystroke. At 50 fields with dense conditions this is fine; at 200+ fields a debounce or a more granular reactivity model (Zustand selectors) would help.
+- **Cross-browser and small-device support:** the E2E suite runs Chromium only; Firefox and Safari (WebKit's `@media print` behaviour, date-input quirks) are untested. Separately, the builder canvas assumes a comfortable viewport — on narrow screens the config panel overflows, drag handles are hard to tap, and the condition editor is unusable. A CI matrix across all three engines plus a mobile-first rework of the builder (or at minimum a read-only fill experience for phones) would be the next platform milestone.
 
 ## Planning artifacts
 
 The architectural decisions section above is a 7-item distillation. The full planning trail lives in [`docs/planning/`](docs/planning/). Highlights worth opening:
 
 - [**TYPES_PROPOSAL.md**](docs/planning/TYPES_PROPOSAL.md) — signed-off type model, registry contract, and engine signatures. Source of truth for everything in `src/types/`, `src/engine/`, and `src/registry/`.
-- [**decision-log.md**](docs/planning/decision-log.md) — every architectural decision with options-considered, chosen path, and reasoning (~40 KB). The long-form version of the *Architectural decisions* section above, including the "evolution" notes that show how decisions changed under review.
+- [**decision-log.md**](docs/planning/decision-log.md) — every architectural decision with options-considered, chosen path, and reasoning (~40 KB). The long-form version of the _Architectural decisions_ section above, including the "evolution" notes that show how decisions changed under review.
 - [**E2E_SCENARIOS.md**](docs/planning/E2E_SCENARIOS.md) — 48 hand-verified scenarios (S1–S41 + M1–M7) serving as the spec for both manual smoke and Playwright. Each has stable ID, preconditions, steps, and explicit expected outcomes; the four bugs caught during manual testing (S16 cascade delete, S17 condition-value editor, S41 preview-with-unsaved, plus a PDF rendering bug) are documented as scenarios with their root-cause analysis.
-- [**assignment.pdf**](docs/planning/assignment.pdf) — the original take-home brief, kept alongside the planning docs for cross-reference.
+- [**requirements.pdf**](docs/planning/requirements.pdf) — the original project requirements, kept alongside the planning docs for cross-reference.
 
 The directory also contains the AI prompts used at each phase: [`CLAUDE_CODE_STARTER_PROMPT.md`](docs/planning/CLAUDE_CODE_STARTER_PROMPT.md) and [`CODEX_REVIEW_PROMPT.md`](docs/planning/CODEX_REVIEW_PROMPT.md) (independent plan reviews), [`ImplementationPrompt.md`](docs/planning/ImplementationPrompt.md) (initial build), [`CompletionPrompt.md`](docs/planning/CompletionPrompt.md) (gap-fill), and [`PlaywrightPlan.md`](docs/planning/PlaywrightPlan.md) (E2E). These exist as evidence of the multi-model orchestration documented in [AI_USAGE_LOG.md](AI_USAGE_LOG.md) — entries 3, 5, and 6 reference them directly.

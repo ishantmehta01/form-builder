@@ -10,7 +10,7 @@
 
 The codebase already exists. Read these to understand current state, **do not re-implement**:
 
-1. **`assignment.pdf`** — the spec
+1. **`requirements.pdf`** — the spec
 2. **`TYPES_PROPOSAL.md`** — locked architecture (engine signature, registry contract, Instance schema)
 3. **`decision-log.md`** — locked decisions (A1 conditionLogic per-effect-group, A2 hidden value handling, A5 topological evaluation, A6 operator semantics, B2 dropped, etc.)
 4. **`ImplementationPrompt.md`** — the original full-build plan you are now completing

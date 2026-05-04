@@ -1,10 +1,10 @@
 # AI Usage Log
 
-> Quality over volume. Entries cover the planning phase across three AI tools — Claude Cowork (planning conversations), Claude Code (implementation agent), and OpenAI Codex (independent reviewer). Implementation entries will be added as the build progresses.
+> Quality over volume. Entries cover the planning phase across three AI tools — Claude Cowork (planning conversations), Claude Code (implementation agent), and OpenAI Codex (independent reviewer). Implementation entries follow.
 
 ## Approach: multi-model iterative review
 
-I used a deliberate multi-model loop for this assignment instead of relying on a single AI throughout. The pattern:
+I ran a deliberate multi-model loop for this assignment instead of relying on a single AI throughout. The pattern:
 
 1. **Plan in Cowork (Claude)** — long-form architectural discussions, decision documentation, trade-off analysis
 2. **Review in Claude Code** — independent agent reviews the plan in the actual repo with file access; pushes back on gaps and risks
@@ -21,7 +21,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 **Phase:** Planning kickoff
 **Tool:** Claude (Cowork)
 
-**Prompt:** Read the assignment PDF. Asked: *"I'm learning end-to-end engineering with AI. My initial plan is design system → mockups → implementation. What other best practices should I add? Use this discussion as planning, not implementation."*
+**Prompt:** Read the assignment PDF. Asked: *"My initial plan is design system → mockups → implementation. Before I start, what's the right ordering for this rubric? Treat this as planning, not implementation — don't suggest code yet."*
 
 **Output summary:** Claude pushed back on my ordering — argued that for this assignment, the type model and conditional-logic engine are the hard parts, not the visuals. Suggested re-ordering: decision log first, then type model, then pure engines (with unit tests), then registry pattern, then UI primitives, then renderers. Flagged the "11th field type without editing 6 files" criterion as a registry-pattern test, not a generic component-design concern.
 
@@ -38,7 +38,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 **Phase:** Decision log construction
 **Tool:** Claude (Cowork)
 
-**Prompt:** Walked through the spec's deliberately-ambiguous areas (multiple conditions on a field, hidden field value handling, calculation source semantics, template editing after instances exist, submission immutability). Asked Claude to lay out options with trade-offs for each.
+**Prompt:** Walked through the spec's deliberately-ambiguous areas (multiple conditions on a field, hidden field value handling, calculation source semantics, template editing after instances exist, submission immutability). Asked Claude to lay out options with trade-offs for each, with a recommendation and the strongest counter-argument against that recommendation.
 
 **Output summary:** For each question, Claude offered 2–4 options with concrete reasoning and a recommendation. Notable picks: per-field AND/OR toggle (default OR), preserve hidden values in state but exclude from submission/PDF (option C), Hide-wins-Show / Not-Required-wins-Required cross-effect precedence, snapshot semantics for instances (deep copy of template at submission time), submitted instances immutable (matches Google Forms model).
 
@@ -72,7 +72,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 **Phase:** Type modeling
 **Tool:** Claude Code
 
-**Prompt:** *"Write the type model + registry contract + engine signatures into `TYPES_PROPOSAL.md`. Don't write engine code yet — I want to sign off on types first."*
+**Prompt:** *"Write the type model + registry contract + engine signatures into `TYPES_PROPOSAL.md`. Don't write engine code yet — I want to sign off on types first. Constraints: zero `any`, discriminated union for conditions, separate base types so 'mark Section Header required' is a compile error, registry shape such that adding an 11th field type touches one file."*
 
 **Output summary:** Claude Code produced TYPES_PROPOSAL.md with: split bases (`BaseFieldShared` for everyone, `RequirableFieldBase` only for input-capturing fields — so "mark Section Header required" is a compile error), namespaced operators (`text_equals` / `number_equals` / `date_equals` to avoid collisions in the discriminated union, with `number_within_range` carrying `[number, number]` natively), and the engine as a single pure function `evaluate(rawValues, template, registry) → { computedValues, visibility, required }`. 9 open questions in §8 for sign-off.
 
@@ -87,7 +87,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 **Phase:** Pre-implementation review (second pass with a different model family)
 **Tool:** OpenAI Codex (Codex CLI)
 
-**Prompt:** Wrote `CODEX_REVIEW_PROMPT.md` (in repo) — same shape as the Claude Code starter prompt but framed as an *independent* review. Briefed it on the assignment + decision log + types proposal + the fact that Claude had already reviewed once. Explicit constraint: *"Don't write or modify any files. Review-only. I have an active Claude Code session in this folder."*
+**Prompt:** Wrote `CODEX_REVIEW_PROMPT.md` (in repo) — same shape as the Claude Code starter prompt but framed as an *independent* review. Briefed it on the assignment + decision log + types proposal + the fact that Claude had already reviewed once. Explicit constraint: *"Don't write or modify any files. Review-only. I have an active Claude Code session in this folder. Skip restating things Claude already flagged — find what Claude missed."*
 
 **Output summary:** Codex returned 8 critiques. Two were significant:
 
@@ -114,7 +114,7 @@ Plus: registry typing should be a mapped type (`Record<FieldType, FieldTypeModul
 **Phase:** Final pre-implementation review
 **Tool:** OpenAI Codex (round 2 after applying entry 5's fixes)
 
-**Prompt:** *"Read-only review. The plan was updated based on your earlier feedback. Verify and surface anything still wrong."*
+**Prompt:** *"Read-only review. The plan was updated based on your earlier feedback. Verify the fixes actually address what you raised, then surface anything still wrong — especially regressions the fixes themselves introduced."*
 
 **Output summary:** 5 issues. The most important (P1): with the new "Instance stores submittedValues only, no computedValues, recompute on re-render via pure engine" model, calc fields lose their submitted value on PDF re-download when their source fields were hidden at submit time. Reason: the engine recomputes the calc using the stored `submittedValues`, but hidden source values were stripped at submit, so the recomputation has different inputs than the original. The "engine is pure, re-runs are deterministic" framing was correct but I missed that determinism only holds when *inputs* are identical.
 
@@ -144,8 +144,6 @@ What I'd do differently: write the AI usage log in real-time alongside the plan,
 
 ## Implementation entries
 
-*Will be added as the build progresses. Format per entry: Phase / Title / Prompt summary / Output summary / Verified / Used as-is, Modified, or Rejected (with reason).*
-
 ---
 
 ## Entry 7 — 22-minute build handoff: trust but verify
@@ -170,7 +168,7 @@ What I'd do differently: write the AI usage log in real-time alongside the plan,
 **Phase:** Manual smoke testing (S5 from `E2E_SCENARIOS.md`)
 **Tool:** Claude Code (consulting)
 
-**Prompt:** Just finished verifying gap-fill completion. Built a form, filled it, opened the instance view, hit Cmd+P. Print preview was blank. Reported: *"PDF is empty."*
+**Prompt:** Just finished verifying gap-fill completion. Built a form, filled it, opened the instance view, hit Cmd+P. Print preview was blank. Reported: *"PDF is empty."* When the first hypothesis didn't fit the symptoms, followed up with: *"the rule already has `!important` — specificity isn't being contested. Walk the actual DOM at print time, top down."*
 
 **Output summary:** Claude's first hypothesis was a CSS specificity issue — the print region had `style={{ display: 'none' }}` inline; the print stylesheet had `#print-region { display: block !important }`; Claude reasoned that inline styles beat external CSS even with `!important`. That diagnosis was wrong. The real cause: the print-region was nested inside `<div id="root">`, and the print rule `body > *:not(#print-region) { display: none }` hides `#root` directly. Once `#root` is `display: none`, every descendant — including the print region — is removed from the layout tree, regardless of the descendant's own `display: block !important`. Fixed by rendering the print-region via `createPortal(printRegion, document.body)` so it's a *sibling* of `#root`, not a descendant.
 
@@ -187,9 +185,11 @@ What I'd do differently: write the AI usage log in real-time alongside the plan,
 **Phase:** Manual smoke testing
 **Tool:** Claude Code (consulting)
 
-**Prompt:** During manual testing I asked: *"If we delete the templates, what happens to their instances?"* Claude answered confidently — single-key localStorage, decision-log D3, "no orphans possible." Then I tried it: built two templates, filled responses for both, deleted one. The deleted template's instances stayed in the DevTools dock's localStorage view. Reported: *"instances are still there even if we delete the templates."*
+**Prompt:** During manual testing I asked: *"If we delete the templates, what happens to their instances?"* When the answer came back as "no orphans possible by design" but I could see orphans in the DevTools dock, followed up with: *"trace the actual code path through `deleteTemplate(id)` — what gets persisted?"*
 
-**Output summary:** Investigated `src/stores/templates.ts`. `deleteTemplate(id)` was destructuring the template out of the templates map and calling `save({ templates: next, instances })` *with the original instances object unchanged*. The cascade-delete confirm dialog already told users "X filled responses will also be deleted" (per D3) but the actual delete handler didn't honor it. Fixed by filtering `instances` to drop entries where `instance.templateId === id` before saving. Added 5 unit tests in a new `src/stores/templates.test.ts`: cascade removes orphans, preserves instances of other templates, persisted state has no orphans, zero-instance delete is a no-op for instances, non-existent id leaves state unchanged.
+**Output summary:** First answer was confident — single-key localStorage, decision-log D3, "no orphans possible." Then I tried it: built two templates, filled responses for both, deleted one. The deleted template's instances stayed in the DevTools dock's localStorage view. Reported: *"instances are still there even if we delete the templates."*
+
+After the trace prompt, Claude investigated `src/stores/templates.ts`. `deleteTemplate(id)` was destructuring the template out of the templates map and calling `save({ templates: next, instances })` *with the original instances object unchanged*. The cascade-delete confirm dialog already told users "X filled responses will also be deleted" (per D3) but the actual delete handler didn't honor it. Fixed by filtering `instances` to drop entries where `instance.templateId === id` before saving. Added 5 unit tests in a new `src/stores/templates.test.ts`: cascade removes orphans, preserves instances of other templates, persisted state has no orphans, zero-instance delete is a no-op for instances, non-existent id leaves state unchanged.
 
 **Verified:** All 5 tests passed. Re-ran the manual scenario: deleted T1 with 2 responses; T1 gone, its 2 responses gone, T2 and its 1 response preserved. Documented as scenario S16 in `E2E_SCENARIOS.md`.
 
@@ -204,7 +204,7 @@ What I'd do differently: write the AI usage log in real-time alongside the plan,
 **Phase:** UX polish
 **Tool:** Claude Code
 
-**Prompt:** While adding save-feedback toasts, I asked: *"in the forms list, can we show how many instances are there?"*
+**Prompt:** While adding save-feedback toasts, I asked: *"in the forms list, can we show how many instances are there? And while you're at it, audit the cards against the spec — not the decision log — and flag anything else that's missing."*
 
 **Output summary:** Claude pointed out — correctly — that this wasn't a polish question. The assignment spec literally says: *"Each template card shows: title, number of fields, number of filled instances, last modified date."* The previous Claude Code session that built TemplatesList had implemented title + field count + modified date but skipped the instance count. The instance count *was* being computed (it's used in the cascade-delete confirm dialog) but never rendered on the card itself. Direct spec violation. Fixed by computing `instanceCountByTemplate` once per render via single-pass map reduction (O(instances), not O(templates × instances)) and surfacing as `{N} fields · {M} responses · Modified {date}` with singular/plural handling. Added `data-testid="template-card-${id}"` and `data-testid="template-meta-${id}"` for E2E.
 

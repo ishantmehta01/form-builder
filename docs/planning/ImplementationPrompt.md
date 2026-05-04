@@ -18,7 +18,7 @@
 
 You are picking up a frontend take-home assignment that has been extensively planned. **Do not redo the planning.** Read these four files to understand the locked architecture:
 
-1. **`assignment.pdf`** — the spec. 10 field types, 2 modes (Builder + Fill), conditional logic, calculations, browser-native PDF export, localStorage persistence. React + TypeScript, no `any`, no third-party PDF libraries.
+1. **`requirements.pdf`** — the spec. 10 field types, 2 modes (Builder + Fill), conditional logic, calculations, browser-native PDF export, localStorage persistence. React + TypeScript, no `any`, no third-party PDF libraries.
 2. **`TYPES_PROPOSAL.md`** — **signed-off type model + registry contract + engine signature.** This is your spec for the engine. §7 is the source of truth for `evaluate` and `validateForm`. Do not invent types — translate what's in this file.
 3. **`decision-log.md`** — full architectural decisions. Pay attention to A1 (AND/OR per-field, Hide > Show, Not-Required > Required precedence), A2 (preserve hidden values during fill, strip at submit), A3 (forward refs allowed, **cycles blocked at builder save**), A5 (two-pass: calc then **topological-with-effective-values** condition pass), A6 (operator semantics — uniform "absent → false"), B2 (**dropped** — calcs aggregate over all sources regardless of source visibility), C3 (date as `YYYY-MM-DD` strings), D1/D4 (single-key localStorage, snapshot semantics), G1 (**CSV columns = union of all instance snapshots**), I3 (block save on invalid config), K2 (no "Page X of Y" promise — Safari unreliable).
 4. **`feedback.md`** — earlier round of decisions to apply. Already reflected in TYPES*PROPOSAL.md and decision-log.md, but useful for understanding the \_why* on a few choices.

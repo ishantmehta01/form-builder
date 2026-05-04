@@ -1,6 +1,6 @@
 # Codex — Independent Pre-Build Review Prompt
 
-> Copy below the `---` line into Codex CLI in this folder, OR paste into ChatGPT with the three reference files attached: `assignment.pdf`, `decision-log.md`, `TYPES_PROPOSAL.md`.
+> Copy below the `---` line into Codex CLI in this folder, OR paste into ChatGPT with the three reference files attached: `requirements.pdf`, `decision-log.md`, `TYPES_PROPOSAL.md`.
 
 ---
 
@@ -12,7 +12,7 @@ Principal Engineer, 11+ years frontend (React/TS, design systems, Storybook, Pla
 
 ## The assignment
 
-Read `assignment.pdf` first. Short version: a browser-based form builder with two modes (Builder + Fill), 10 field types, conditional logic, calculation fields, browser-native PDF export (no third-party PDF libs), localStorage persistence. React + TypeScript, no `any`.
+Read `requirements.pdf` first. Short version: a browser-based form builder with two modes (Builder + Fill), 10 field types, conditional logic, calculation fields, browser-native PDF export (no third-party PDF libs), localStorage persistence. React + TypeScript, no `any`.
 
 ## What I've already produced
 
