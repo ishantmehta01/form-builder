@@ -30,21 +30,47 @@ localStorage['formBuilder'] = {
 
 ### 1. Two-pass engine with topological condition evaluation and effective-value stripping
 
-The engine runs `evaluate(rawValues, template, registry) → { computedValues, visibility, required }` in two passes.
+The engine runs `evaluate(rawValues, template, registry) → { computedValues, visibility, required }` in two passes — calculations first, then conditions in topological order.
 
-**Pass 1** computes all calculation fields from raw values (no visibility filtering — see B2 below). **Pass 2** evaluates conditions in topological order over the condition dependency graph (edges: `target → owner`). The key correctness property: when a field becomes hidden, its entry is deleted from the `effectiveValues` map _before_ downstream fields are processed. Without this stripping, a field hidden upstream (e.g., B) could still satisfy a downstream condition via its preserved-but-hidden value, leaving the downstream field (C) incorrectly visible. This cascade bug was caught in review and the fix — topological iteration with effective-value stripping — is the headline engine correctness property.
+**Pass 1: Calculations.** For each calculation field, aggregate its source field values from `rawValues`. No visibility filtering happens here (see B2 in the decision log) — calc fields aggregate over all source values regardless of which sources are conditionally hidden. The calc itself can be hidden by its own condition; if hidden, it's excluded from submission/PDF/CSV.
 
-Cycles are blocked at builder save time and re-validated on storage load. The engine still defends as a last resort: if `topologicalSort` detects a cycle, it logs and returns all-default visibility/required without throwing.
+**Pass 2: Conditions.** Evaluate each field's conditions in topological order over the condition dependency graph (edges: `target → owner`). The key correctness property: **when a field becomes hidden, its entry is deleted from the `effectiveValues` map before downstream fields are processed.** This *effective-value stripping* prevents what would otherwise be a real cascade bug.
+
+**Worked example.** Three fields:
+
+- `A`: a single-select with options Yes / No
+- `B`: a text field with condition *show if A = Yes*
+- `C`: a text field with condition *show if B = "hello"*
+
+User picks Yes for A, types "hello" in B, types something in C. Now both B and C are visible. User then changes A to No. What happens?
+
+- *Without* effective-value stripping: B's value ("hello") is preserved per A2 — the engine just hides B's display, not its data. C's condition reads B's preserved value and stays visible. **Bug: C is shown even though B (its trigger) is hidden.**
+- *With* effective-value stripping: when B is marked hidden in Pass 2, its entry is deleted from `effectiveValues`. C is processed *after* B in topological order, so when C's condition tries to read B, it sees nothing. C correctly hides too.
+
+This bug was caught in pre-implementation review (see [AI usage log](AI_USAGE_LOG.md) Entry 5). The fix — topological iteration plus effective-value stripping — is the headline correctness property of the engine.
+
+**Cycle handling — three layers of defense.** Cycles in the condition graph are blocked at builder save time (a condition that would create a loop is rejected with an inline error). On storage load, the same cycle validation runs again — corrupt or hand-edited localStorage can't slip a cyclic template past the engine. As a last resort, the engine itself defends: if `topologicalSort` somehow encounters a cycle at runtime, it logs and returns all-default visibility/required instead of throwing.
 
 ### 2. Hidden field handling: preserve in state, strip at submit
 
-During fill mode, hidden field values are preserved in component state (decision A2). This means toggling a condition back doesn't lose the user's input. At submit, only visible field values are stored in the instance. This is a pure transformation: `filter(memoryValues, visibility) → submittedValues`.
+During fill mode, hidden field values are preserved in component state (decision A2). This means toggling a condition back doesn't lose the user's typed input. At submit, only visible field values land in the saved instance — `filter(memoryValues, visibility) → submittedValues`.
+
+**Worked example.** A user types "John" into the Name field. A condition then hides Name (e.g., they ticked "I'd rather not say my name"). Two scenarios:
+
+1. *They reverse the toggle before submitting:* "John" is still in the input. No data lost.
+2. *They submit while Name is hidden:* "John" is **not** saved in the instance. The submission only contains visible-at-submit-time values; PDF and CSV exports never see "John."
+
+We keep typed data through accidental toggles, but ensure hidden values never leak into PDF, CSV, or stored instances. One pure function (`filter(memoryValues, visibility)`) enforces this at every export path — there's no second code path for "what counts as submitted."
 
 ### 3. Instance snapshot semantics for fidelity
 
-Submitted instances store a full structural copy of the template at submission time (`templateSnapshot`). This means re-rendering an old response uses the field types and options that existed when the user filled it, not the current (potentially changed) template. CSV export reads `instance.templateSnapshot.fields` across all instances, deduping by field ID and ordering by latest-snapshot position — the union-of-snapshots strategy.
+Submitted instances store a full structural copy of the template at submission time (`templateSnapshot`). Re-rendering an old response uses the field types and options that existed *when the user filled it*, not the current (potentially changed) template.
 
-Instances also store `visibility` (the full map at submit time) and computed calc values for visible calcs. Re-rendering is a pure display function with no engine call, which avoids the re-computation bug: if a source field was hidden and stripped from `submittedValues`, re-running the engine on submitted values would produce different aggregates than what the user saw at submit time.
+**Worked example.** A user submits a response against template V1 today. Tomorrow the builder renames "Email" to "Contact Address," removes the "Phone" field entirely, and changes a Single Select's option labels. Re-downloading the user's PDF still shows V1's layout — same field order, same labels, same options as when they filled it. The user's "Phone" answer still appears in their PDF, even though that field no longer exists in the live template.
+
+CSV export reads `instance.templateSnapshot.fields` across all instances, deduping by field ID and ordering by latest-snapshot position — the *union-of-snapshots* strategy. Older instances' values for fields that no longer exist in the current template still appear as columns; field labels come from the latest snapshot that still has each field (handles renames cleanly).
+
+Instances also store `visibility` (the full map at submit time) and pre-computed calc values for visible calcs. Re-rendering is a *pure display function* with no engine call. This avoids a subtle bug: if we re-ran the engine on submitted values, hidden source values would have been stripped at submit, so calc aggregates would compute differently than what the user actually saw and submitted. Storing the computed values prevents that drift.
 
 ### 4. Registry pattern with mapped type for adding field types
 
@@ -66,14 +92,19 @@ A field's `conditionLogic` (AND or OR) applies _within_ each effect group separa
 
 ### 7. Operator semantics: absent values are uniformly false
 
-When a condition's target is absent from `effectiveValues` (never answered, or hidden upstream), all comparison operators return `false` — including `not_equals` and `multi_contains_none`. The user-facing principle: _unanswered fields don't trigger logic; defaults apply._ This keeps AND/OR combination simple (no third "skip" state) and matches builder intuition.
+When a condition's target is absent from `effectiveValues` (never answered, or hidden upstream), all comparison operators return `false` — *including* `not_equals` and `multi_contains_none`.
+
+**Worked example.** A field has condition `Email != "spam@x.com"` → *show this field*. The user opens the form but hasn't filled in Email yet (Email is absent). Naively, "absent != 'spam@x.com'" looks true, so the field would show. Instead, our rule treats absent as "no signal," the condition evaluates to `false`, and the field falls back to its `defaultVisible`.
+
+The user-facing principle: *unanswered fields don't trigger logic; defaults apply.* This keeps AND/OR combination simple (no third "skip" state to merge) and matches builder intuition — no one writes a `not_equals` rule expecting it to fire on empty inputs.
 
 ## What I'd do with more time
 
-- **Condition builder UI:** the current condition editor is minimal (raw dropdowns). A visual "if/then" builder with field-type-aware operator lists and value pickers (date picker, option checkboxes) would greatly reduce mis-configuration.
+- **Condition builder UI:** the current condition editor is a flat row of raw dropdowns where the value input doesn't adapt to the operator — you type a date string into a text box for `date_after`, paste an option ID into a text box for `select_equals`, and there's no live preview of what the rule does. A visual `[field] [operator] [value-aware-input]` row with a preview line (*"this rule will hide Field X when DOB is after 2026-01-01"*) would compress mis-configuration significantly. The hard part isn't the layout — it's the value-input switching: a date picker for date operators, option checkboxes for `select_equals` / `multi_contains_*`, a two-slot number input for `number_within_range`. Each operator type needs its own micro-component, and the builder UI has to swap them inline as the operator dropdown changes.
 - **Undo/redo in builder:** `useReducer` + action history; currently unsaved changes are only protected by the `beforeunload` warning.
+- **Live drafts for in-progress fills:** today, fill state lives in component state until Submit. A debounced autosave on every keystroke (persisted as a separate `draft` collection in localStorage, distinct from submitted instances) would let users close a tab mid-fill and resume without losing work. Drafts would clear automatically on successful submit or explicit discard.
 - **File uploads:** the file field captures metadata but doesn't actually upload files (no backend). Real upload would need presigned URLs or IndexedDB.
-- **Template versioning:** instances carry a snapshot, but the template list shows only the current version. A "view at submission time" affordance would help auditors.
+- **Template versioning:** instances carry a snapshot, but there's no explicit version registry — the template list shows only the live version, and there's no diff between what an instance was filled against and what the template looks like today. The natural extension: each builder-save creates a `Template v1`, `v2`… in storage; instances reference a version ID instead of carrying a full snapshot; the builder shows *"this template has 5 historical versions"* with a per-version preview and diff view. The migration path is straightforward — existing snapshots are deduped into the version registry on first run. Useful for any audit-trail use case (compliance, contract changes, regulatory review).
 - **Richer PDF:** running headers and "Page X of Y" in Safari require JavaScript-injected per-page divs and `ResizeObserver`, which is a significant spike. Skipped per K2.
 - **Accessibility:** labels and `aria-required` are wired, but keyboard navigation of tiles/drag-and-drop and error announcement via `aria-live` need deeper testing with a screen reader.
 - **Performance:** engine re-runs on every keystroke. At 50 fields with dense conditions this is fine; at 200+ fields a debounce or a more granular reactivity model (Zustand selectors) would help.

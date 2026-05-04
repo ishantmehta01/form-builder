@@ -291,7 +291,7 @@ Note: this only applies to template editing. Submitted instances are immune (see
 
 **Reasoning:** Historical fidelity is preserved without the complexity of explicit versioning. Storage cost is negligible (~5KB per template structure; well within localStorage's 5MB budget for any realistic instance count). (B) breaks instances when fields are removed from the template — bad. (D) is annoying for builders during the iteration phase. (C) is the "right" production answer but is over-scoped for a take-home.
 
-**Future extension (see "What I'd do with more time"):** evolve (A) into (C) — a versioned templates model where each template edit creates a new version, instances reference a version ID, and the snapshot is replaced by a normalized version lookup. The snapshot model is the seed of that — same data shape, just denormalized for now.
+**Future extension (see [README's *What I'd do with more time*](../../README.md#what-id-do-with-more-time)):** evolve (A) into (C) — a versioned templates model where each template edit creates a new version, instances reference a version ID, and the snapshot is replaced by a normalized version lookup. The snapshot model is the seed of that — same data shape, just denormalized for now.
 
 ---
 
@@ -551,19 +551,14 @@ Full a11y audit (axe + screen reader pass) is "with more time."
 ---
 
 ## N. What I'd Do With More Time
-*This section feeds the README's "Future Improvements" section directly.*
 
-**Versioned templates.** Today, instances are denormalized snapshots of the template at submission time (D4 → A). The natural evolution is explicit template versioning: each template edit creates an immutable version (`v1`, `v2`, …), instances reference a specific version, the editor sees a "this template has 5 historical versions" indicator. Migration is straightforward — existing snapshots become the seed for the version registry. This is the "correct" production model for any system that captures form responses over time.
+**See the [README's *What I'd do with more time* section](../../README.md#what-id-do-with-more-time)** — single source of truth.
 
-**Disabled / draft state for fields.** Builders often need to park work-in-progress fields without deleting them — common feature in Typeform, Notion forms. Implementation would add a `disabled: boolean` to field config (distinct from conditional hide — that's runtime/value-driven; this is build-time/builder-controlled). Engine treats disabled fields identically to hidden-by-condition (same code path, no new logic). Builder canvas renders them with reduced opacity + "DISABLED" badge. Skipped from Fill Mode, PDF, and CSV. Edge cases (conditions/calcs referencing a disabled field) fall through to default state with builder warnings.
+This section was previously duplicated here. Removed to avoid drift. The README is the canonical list because it's what reviewers read first; this decision log focuses on *decisions made*, not *future work deferred*.
 
-**Explicit AND/OR groups in conditional logic.** Today, conditions on a single field share one AND/OR mode (A1 → C). A natural extension is groups — `((A=X AND B=Y) OR (C=Z))` — typically modelled as a tree of condition nodes. Most form builders eventually need this for power-user flows.
+A few items that originated in this section but didn't make the README cut, kept here as engineering-detail footnotes:
 
-**Real autosave + draft instances.** Today, fill state lives in component state until Submit. With more time: persist a draft on every keystroke (debounced) so a refresh mid-fill doesn't lose work. Drafts vs submitted instances become distinct collections in localStorage.
-
-**Cross-tab sync via `storage` events.** Two tabs editing the same template currently last-write-wins silently. A `storage` event listener could detect external changes and prompt the user.
-
-**Accessibility audit.** Keyboard nav for tile-display Single Select, focus management on conditional show/hide, ARIA live regions for calculation updates, error message association via `aria-describedby`. Pass with axe + manual screen-reader test.
-
-**E2E tests with Playwright.** Cover: build a form with all 10 field types → fill it with conditional + calculation interactions → export PDF → assert PDF contents. One happy-path E2E catches a class of regressions that unit tests miss.
+- **Disabled / draft state for fields.** A builder-mode toggle to park work-in-progress fields without deleting them (distinct from conditional hide — that's runtime/value-driven; this would be build-time/builder-controlled). Was considered as a baseline scope addition (alongside CSV export) and explicitly deferred — the leakage trade-off in B2 is already documented; adding a second hide path would require re-walking that analysis without commensurate user value for this take-home.
+- **Explicit AND/OR groups in conditional logic.** A1 picks per-field AND/OR; the next step is grouping — `((A=X AND B=Y) OR (C=Z))` as a tree of condition nodes. Useful for power-user flows but uncommon enough that it stays in the decision log rather than the README's user-facing list.
+- **Cross-tab sync via `storage` events.** Two tabs editing the same template currently last-write-wins silently. A `storage` event listener would detect external changes and prompt the user. Pure engineering detail, not surfaced in README.
 
