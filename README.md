@@ -2,6 +2,8 @@
 
 A browser-based form builder and filler with conditional logic, calculations, PDF export, and CSV export. Built with React 19, TypeScript, Vite, Zustand, and Tailwind CSS.
 
+**Live demo:** https://form-builder-dusky-eta.vercel.app/
+
 ## Running locally
 
 ```bash
