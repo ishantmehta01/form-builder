@@ -2,13 +2,16 @@
 
 > Quality over volume. Entries cover the planning phase across three AI tools — Claude Cowork (planning conversations), Claude Code (implementation agent), and OpenAI Codex (independent reviewer). Implementation entries follow.
 
-## Approach: multi-model iterative review
+## Approach: multi-model iterative review (emerged, not pre-designed)
 
-I ran a deliberate multi-model loop for this assignment instead of relying on a single AI throughout. The pattern:
+What started as a single-model planning session in Cowork turned into a multi-model loop after Claude's first plan didn't survive a Claude Code review. After Claude Code caught a real cycle bug (B2 + A5, see Entry 3), I added a second independent reviewer (OpenAI Codex) on the suspicion that two Claude sessions would still share blind spots. That suspicion paid out — Codex caught the chained-conditions cascade in Entry 5. Codex round 2 was added after applying Entry 5's fixes specifically to check for fix-induced regressions.
+
+The pattern that emerged:
 
 1. **Plan in Cowork (Claude)** — long-form architectural discussions, decision documentation, trade-off analysis
 2. **Review in Claude Code** — independent agent reviews the plan in the actual repo with file access; pushes back on gaps and risks
 3. **Cross-validate with OpenAI Codex** — second independent agent reviews the plan and Claude Code's revisions; surfaces blind spots that both Claude instances share
+4. **Codex round 2** — re-review focused on regressions introduced by the previous round's fixes
 
 This caught three real bugs before any engine code was written. Each pass found something the previous didn't. Diminishing returns kicked in around pass three; I stopped reviewing and started building.
 
@@ -44,7 +47,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 
 **Verified:** Applied senior judgment to each, agreed with most. Pushed back on Q4 (template edit propagation) — Claude wanted snapshot-at-submission as the baseline. I agreed but added a note: versioned templates is the *correct* production model, document it as the headline "with more time" item. This shows the reviewer I understand the snapshot is a deliberate scope choice, not the right answer.
 
-**Modified:** Q6 (forward references) — Claude initially recommended allowing forward references for engine simplicity. I overrode in favor of forbidding them for better filler UX. Then when asked again ("what do *you* recommend?"), Claude held its ground at "weakly prefer allow." I went with allow on the third pass after weighing again. Documented BOTH choices in the decision log so the reviewer sees the trade-off was considered both ways.
+**Modified:** Q6 (forward references) — Claude initially recommended allowing forward references for engine simplicity. I overrode in favor of forbidding them for better filler UX. When asked again ("what do *you* recommend?"), Claude held its ground at "weakly prefer allow." On the third pass I flipped to allow, but the decisive factor wasn't Claude's persuasion — it was realizing the cycle blocker at builder-save time already covers the worst case (forward refs can't create runtime loops because cycles are caught upfront), so the engine-simplicity argument wins on a bounded UX cost. The filler can still be confused by a forward reference, but progressive reveal patterns work without it. Documented BOTH choices in the decision log so the reviewer sees the trade-off was considered both ways.
 
 **Used:** All decisions in the resulting decision log were either accepted, modified, or explicitly justified as overrides.
 
@@ -63,7 +66,7 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 
 **Used:** All 7 critiques accepted with light nuance. Major outcome: dropped B2 (calcs now aggregate over all sources regardless of visibility, calc itself can be hidden by its own condition) and significantly expanded the registry contract before any code was written.
 
-**This is the "plausibly wrong" example.** Claude in Cowork had given me a clean, plausible-sounding rule for B2 ("exclude hidden sources for consistency with the hidden-data exclusion rule") that didn't survive contact with A5. The reasoning sounded right at planning time. Only by combining it with another decision did the bug surface. Lesson: AI plans look more coherent than they are because each decision is reasoned in isolation. Multi-decision interactions need their own review pass.
+Claude in Cowork had given me a clean, plausible-sounding rule for B2 ("exclude hidden sources for consistency with the hidden-data exclusion rule") that didn't survive contact with A5. The reasoning sounded right at planning time. Only by combining it with another decision did the bug surface. Lesson: AI plans look more coherent than they are because each decision is reasoned in isolation. Multi-decision interactions need their own review pass.
 
 ---
 
@@ -76,9 +79,9 @@ The full planning trail lives in `decision-log.md` (architectural decisions, ~30
 
 **Output summary:** Claude Code produced TYPES_PROPOSAL.md with: split bases (`BaseFieldShared` for everyone, `RequirableFieldBase` only for input-capturing fields — so "mark Section Header required" is a compile error), namespaced operators (`text_equals` / `number_equals` / `date_equals` to avoid collisions in the discriminated union, with `number_within_range` carrying `[number, number]` natively), and the engine as a single pure function `evaluate(rawValues, template, registry) → { computedValues, visibility, required }`. 9 open questions in §8 for sign-off.
 
-**Verified:** Code-reviewed the proposal back in Cowork. Requested 6 changes: validator return type should be `ValidationError[]` not `ValidationError | null` (for internal consistency with the renderer prop), add a `validateForm` sibling helper for submit-time validation, make the CSV iteration rule explicit, document Q4 (File-as-target = no) and Q5 (Calc-as-target = yes) as deliberate scope choices, fix the multi-select empty representation contradiction. Validator signature also needed a `ValidatorContext` parameter so it knows whether the field is required.
+**Verified:** Code-reviewed the proposal back in Cowork. The biggest tension was the validator return type: Claude Code had it as `ValidationError | null` (one error at a time), which is ergonomic for single-field validation but inconsistent with how the renderer would receive errors (an array, since one field can have multiple validation problems — required + format + length). Picking `ValidationError | null` would have forced an awkward `errors[0] ?? null` adapter at every renderer call site, or worse, dropped errors silently. Switched to `ValidationError[]` so the validator and renderer speak the same shape end-to-end. Same call surfaced 5 other changes: add a `validateForm` sibling helper for submit-time validation, make the CSV iteration rule explicit, document Q4 (File-as-target = no) and Q5 (Calc-as-target = yes) as deliberate scope choices, fix the multi-select empty representation contradiction, and add a `ValidatorContext` parameter to the validator signature so it knows whether the field is required.
 
-**Used:** All 6 changes applied; signed off on the type model before writing engine code.
+**Used:** All 6 changes applied; signed off on the type model before writing engine code. The contract-first move was load-bearing — the `ValidationError[]` decision specifically would have been a painful refactor if caught after the renderers were written.
 
 ---
 
@@ -103,7 +106,7 @@ Plus: registry typing should be a mapped type (`Record<FieldType, FieldTypeModul
 - Codex suggested *dropping calc-as-target* as the symmetric fix to the cycle. I kept it because *"show this field if Total > 1000"* is the highest-value condition pattern with calc fields, and the cycle was caused by B2 + calc-as-target *together* — dropping B2 alone resolves the cycle while preserving the feature.
 - Codex suggested demoting CSV export to "with more time." I kept it as baseline — ~30 mins of work, it signals product completeness, and shipping a forms product without bulk export reads as incomplete.
 
-**This is also a "plausibly wrong" example, deeper than entry 3.** Claude in Cowork had explicitly said "conditions check values not visibility, so no fixed-point or cascade is needed." That sounded technically correct because conditions evaluate the *value* of a target field, not its visibility. But it ignored the fact that hidden fields *preserve* their values per A2, so the value evaluated downstream is stale. The framing was clean and confident; it was wrong. Codex caught it because Codex doesn't share Claude's prior reasoning bias.
+Claude in Cowork had explicitly said "conditions check values not visibility, so no fixed-point or cascade is needed." That sounded technically correct because conditions evaluate the *value* of a target field, not its visibility. But it ignored the fact that hidden fields *preserve* their values per A2, so the value evaluated downstream is stale. The framing was clean and confident; it was wrong. Codex caught it because Codex doesn't share Claude's prior reasoning bias.
 
 **Engine model change as a result:** topological evaluation within the condition pass, with effective-value stripping (a field hidden upstream is removed from the running `effectiveValues` map so downstream conditions see it as absent). Cycles in the condition dependency graph blocked at builder save time so the engine can assume a DAG. This is a real architectural change driven by the review.
 
@@ -221,7 +224,7 @@ After the trace prompt, Claude investigated `src/stores/templates.ts`. `deleteTe
 **Phase:** End of implementation
 **Tool:** N/A
 
-Implementation entries 7–10 were reconstructed at the end of the build phase rather than captured live, despite the `AI_LOG_DISCIPLINE_FOR_CLAUDE_CODE.md` rule that said *"capture live, not retroactive."* I'm noting this honestly because the alternative — pretending live capture happened — would be worse. Next time I'd enforce live capture by adding a "log this phase if anything significant happened" prompt at every checkpoint, and treat the log as a build artifact rather than an end-of-day chore.
+Implementation entries 7–10 were reconstructed at the end of the build phase rather than captured live, despite the `AI_LOG_DISCIPLINE_FOR_CLAUDE_CODE.md` rule that said *"capture live, not retroactive."* Planning entries 1–6 were reconstructed too — drafted from chat history during a summarization session and edited for voice. The implementation entries are closer to live (the bugs and fixes were fresh) but neither set was captured at the actual moment of acceptance/rejection. I'm noting this honestly because the alternative — pretending live capture happened — would be worse, and because a strict reader can probably tell from the tonal difference between the two halves anyway. Next time I'd enforce live capture by adding a "log this phase if anything significant happened" prompt at every checkpoint, and treat the log as a build artifact rather than an end-of-day chore.
 
 The single most valuable habit during the build was the verification cadence I added: after every "I'm done" claim from Claude Code, run `find` for file count, `wc -l` for line counts on suspicious files, `grep` for `it.skip` / `TODO` / `FIXME`, `npm test -- --run`, `npm run typecheck`, `npm run build`. That cadence surfaced four real issues:
 

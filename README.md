@@ -58,7 +58,7 @@ Each key is pinned to its specific field type module. Adding an 11th field type 
 
 ### 5. PDF: browser-native print with @media print isolation
 
-PDF export calls `window.print()` with `@media print` CSS that hides everything except `#print-region`. The print region renders fields using their `pdfRenderer` (same JSX, different layout). `@page` margin boxes with `counter(page)` work in Chrome and Firefox. Safari ignores `@page` margin boxes, so "Page X of Y" is not promised — only "Page X" via `counter(page)` when it works. This is documented in the CSS and not surfaced as a feature.
+PDF export calls `window.print()` with `@media print` CSS that hides everything except `#print-region`. The print region renders fields using their `pdfRenderer` (same JSX, different layout). `@page` margin boxes with `counter(page)` give per-page numbering in Chrome and Firefox. Safari ignores `@page` margin boxes — the cross-browser path is JavaScript-injected per-page divs measured with `ResizeObserver` to know where pages break, then numbered manually. That's the right solution and it's listed under _What I'd do with more time_; for the time budget here I scoped to "Page X" where the browser supports it and surfaced the limitation in the CSS rather than ship a half-implemented `ResizeObserver` path.
 
 ### 6. AND/OR logic is per-effect-group with deterministic precedence
 
