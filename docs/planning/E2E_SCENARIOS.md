@@ -1113,6 +1113,77 @@ expect(t).toBeLessThan(50);
 
 ---
 
+# Bugs caught during Codex final audit (2026-05-04)
+
+Before submission I ran one more independent pass with OpenAI Codex over the implemented repo (not the plan). Codex's "would I ship this exact repo" verdict came back as *no, not without a fix pass* — engine and architecture passed cleanly, but a handful of implementation/doc drift items had crept in during the build that earlier reviews (which were plan-focused) couldn't catch. Two were code bugs worth scenario-ifying; two were doc drift fixes that don't need scenarios but are noted here for traceability.
+
+## S42 — Templates list shows correct response counts after cold reload (spec compliance)
+
+**Bug surfaced during Codex final audit 2026-05-04:** `TemplatesList` reads `useInstancesStore().instances` for the `{N} responses` card metadata, but only called `loadFromStorage()` on the templates store. The instances store starts empty and stays empty until the user navigates to a page that loads it (Fill, InstanceView). Net effect: on a cold reload of `/`, every card shows `0 responses` even when localStorage has dozens of submissions. This violates the spec line *"Each template card shows: title, number of fields, **number of filled instances**, last modified date"* and is the first thing a reviewer sees after refreshing the deployed link. Fixed in `src/pages/TemplatesList.tsx` by also calling `useInstancesStore().loadFromStorage()` in the mount effect.
+
+**Preconditions:** localStorage seeded with one template `T1` having ≥2 submitted instances.
+
+**Steps:**
+
+1. Hard reload `/` (cold load — no prior in-session navigation).
+2. Read the metadata line on `T1`'s card.
+
+**Expected:**
+
+- Card shows `N fields · 2 responses · Modified <date>` (not `0 responses`).
+- Refreshing again does not change the count.
+
+**Playwright assertion:**
+
+```ts
+await page.goto('/');
+const meta = await page.getByTestId(`template-meta-${t1.id}`).textContent();
+expect(meta).toContain('2 responses');
+```
+
+**Maps to:** `tests/e2e/builder.spec.ts`. One Playwright `test()` titled `S42 — Templates list response count survives cold reload`.
+
+---
+
+## S43 — Date field `prefillToday` respects local timezone, not UTC
+
+**Bug surfaced during Codex final audit 2026-05-04:** `src/fields/date/index.tsx` was using `new Date().toISOString().slice(0, 10)` for the `prefillToday` default. `toISOString()` returns the UTC date, which differs from the user's local date for a non-trivial slice of every day (in IST, midnight–05:30 local; in PST, 16:00–23:59 local). A US-Pacific reviewer opening the deployed link in the late afternoon would see "today" prefilled as *tomorrow's* date — a visible off-by-one. Fixed by constructing `YYYY-MM-DD` from `getFullYear/getMonth/getDate` (local) instead of `toISOString`.
+
+**Preconditions:** Field with `type: 'date', prefillToday: true`. Browser clock and timezone such that local date ≠ UTC date (e.g., set system timezone to PST and run between 16:00 and 23:59 local).
+
+**Steps:**
+
+1. Open Fill mode for the template.
+2. Read the date field's prefilled value.
+
+**Expected:**
+
+- Prefilled value matches the user's local date, not UTC.
+
+**Playwright note:** harder to assert deterministically because Playwright inherits the host clock/TZ. The cheap regression guard is a unit test pinning `Date.now()` and `Intl.DateTimeFormat().resolvedOptions().timeZone` via `vi.setSystemTime` and a TZ shim, asserting the formatter returns local-date components. Manual scenario kept here for the cross-browser verification path.
+
+**Maps to:** `src/fields/date/date.test.ts` (unit) — primary guard. Manual repro across timezones — secondary.
+
+---
+
+## Doc drift fixes (no scenario needed)
+
+Two doc-code drift items Codex flagged were straight documentation fixes:
+
+- **README future-version claim trimmed.** The `localStorage schema` section had said *"Future-version data throws a recoverable error surfaced in the UI."* In reality `load()` throws, the throw is logged, and we fall back to empty state — there's no UI surfacing wired up. README updated to match: *"throws on load (logged, falls back to empty state — surfacing as a toast/banner is on the polish list)."* The toast/banner work is a real candidate for the *What I'd do with more time* list.
+- **AI_USAGE_LOG.md path precision.** Line 18 referenced `decision-log.md` and `TYPES_PROPOSAL.md` without the `docs/planning/` prefix. Updated to the full paths so an interviewer following the link doesn't have to guess.
+
+## Items intentionally not fixed in this pass
+
+For traceability — Codex also flagged these; conscious scope calls to defer:
+
+- **`deleteField` doesn't strip stale conditions/calc sources** (`src/pages/Builder.tsx`). The confirm dialog says *"Other fields reference this field. Delete anyway?"* which the user accepts before delete proceeds — the orphaned references are recoverable (engine treats absent targets as `false` per operator semantics, so dependent fields default to hidden rather than firing wrongly). Not a correctness hole, but a polish item.
+- **Save-time validation is cycle-only.** `handleSave` in Builder doesn't block calc-with-no-sources, `min > max`, empty labels, or `maxSelections < minSelections`. Each is a real validation gap; the right fix is per-field-type config validators wired into the same save guard. Logged for the polish list.
+- **Quota-exceeded toast.** `save()` calls `localStorage.setItem` directly. A `QuotaExceededError` would propagate as an unhandled exception. Real risk only at large file-attachment counts; deferred.
+- **DevTools UI ships in production.** Intentional — the floating menu and dock are useful for an interviewer wanting to inspect localStorage directly on the deployed link. Documented as a feature, not a debug surface.
+
+---
+
 ## Future / reserved
 
 When you find a manual bug not covered by S1–S41, append a new scenario in this section, fix the bug, then add to Playwright. Keeps the test suite a living spec, not a frozen snapshot.

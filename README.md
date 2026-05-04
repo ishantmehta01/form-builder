@@ -26,7 +26,7 @@ localStorage['formBuilder'] = {
 }
 ```
 
-**Why single key:** atomic reads/writes, trivially snapshottable, easy to inspect in devtools. Migrations run at app boot (`storage/migrations.ts` framework ready). Future-version data throws a recoverable error surfaced in the UI. JSON parse failures return empty state.
+**Why single key:** atomic reads/writes, trivially snapshottable, easy to inspect in devtools. Migrations run at app boot (`storage/migrations.ts` framework ready). Future-version data throws on load (logged, falls back to empty state — surfacing as a toast/banner is on the polish list). JSON parse failures return empty state.
 
 ## Architectural decisions
 

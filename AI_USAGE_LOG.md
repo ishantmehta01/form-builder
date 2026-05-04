@@ -15,7 +15,7 @@ The pattern that emerged:
 
 This caught three real bugs before any engine code was written. Each pass found something the previous didn't. Diminishing returns kicked in around pass three; I stopped reviewing and started building.
 
-The full planning trail lives in `decision-log.md` (architectural decisions, ~30K chars of options/reasoning) and `TYPES_PROPOSAL.md` (signed-off type model + registry contract + engine signatures). README's *Architectural Decisions* section is a 5–7 item distillation of these — not the full transcript.
+The full planning trail lives in `docs/planning/decision-log.md` (architectural decisions, ~30K chars of options/reasoning) and `docs/planning/TYPES_PROPOSAL.md` (signed-off type model + registry contract + engine signatures). README's *Architectural Decisions* section is a 5–7 item distillation of these — not the full transcript.
 
 ---
 
