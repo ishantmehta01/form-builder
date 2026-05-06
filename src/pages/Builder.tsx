@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useTemplatesStore } from "@/stores/templates";
 import { useToastsStore } from "@/stores/toasts";
+import { setActiveEditor } from "@/storage/activeEditorRegistry";
 import { registry } from "@/registry";
 import { findCycle, buildConditionGraph } from "@/engine/graph";
 import type { Field, FieldType } from "@/types/field";
@@ -537,6 +538,14 @@ export function Builder() {
   const [isDirty, setIsDirty] = useState(false);
   const [previewConfirmOpen, setPreviewConfirmOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Register this Builder instance in the active-editor registry so the cross-tab
+  // sync hook knows which template is being edited and whether it has unsaved changes.
+  useEffect(() => {
+    if (isNew || !templateId) return;
+    setActiveEditor({ templateId, isDirty });
+    return () => setActiveEditor(null);
+  }, [isDirty, isNew, templateId]);
 
   // Load existing template data when navigating directly
   useEffect(() => {

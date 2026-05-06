@@ -1,13 +1,11 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTemplatesStore } from '@/stores/templates';
 import { useInstancesStore } from '@/stores/instances';
 import { useToastsStore } from '@/stores/toasts';
 
 export function TemplatesList() {
-  const { templates, invalidTemplateIds, loadFromStorage, deleteTemplate } = useTemplatesStore();
+  const { templates, invalidTemplateIds, deleteTemplate } = useTemplatesStore();
   const { instances } = useInstancesStore();
-  const loadInstances = useInstancesStore((s) => s.loadFromStorage);
   const pushToast = useToastsStore((s) => s.pushToast);
 
   // Compute instance count per template once per render — used for both card display and delete confirm
@@ -15,11 +13,6 @@ export function TemplatesList() {
   for (const inst of Object.values(instances)) {
     instanceCountByTemplate[inst.templateId] = (instanceCountByTemplate[inst.templateId] ?? 0) + 1;
   }
-
-  useEffect(() => {
-    loadFromStorage();
-    loadInstances();
-  }, [loadFromStorage, loadInstances]);
 
   const list = Object.values(templates).sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
 

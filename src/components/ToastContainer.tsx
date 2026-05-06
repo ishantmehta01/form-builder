@@ -20,16 +20,34 @@ export function ToastContainer() {
       aria-atomic="false"
     >
       {toasts.map((toast) => (
-        <button
-          type="button"
+        <div
           key={toast.id}
           data-testid={`toast-${toast.variant}`}
           role="status"
           onClick={() => dismissToast(toast.id)}
-          className={`pointer-events-auto px-4 py-2 rounded shadow-lg text-sm font-medium text-white ${VARIANT_STYLES[toast.variant]} cursor-pointer transition-opacity`}
+          className={`pointer-events-auto px-4 py-2 rounded shadow-lg text-sm font-medium text-white ${VARIANT_STYLES[toast.variant]} flex items-center gap-3 cursor-pointer`}
         >
-          {toast.message}
-        </button>
+          <span className="flex-1">
+            {toast.message}
+          </span>
+          {toast.action && (
+            <button
+              type="button"
+              onClick={() => { toast.action!.onClick(); dismissToast(toast.id); }}
+              className="underline shrink-0 hover:no-underline"
+            >
+              {toast.action.label}
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => dismissToast(toast.id)}
+            className="shrink-0 opacity-70 hover:opacity-100"
+          >
+            ✕
+          </button>
+        </div>
       ))}
     </div>
   );

@@ -7,10 +7,12 @@ import { InstanceView } from './pages/InstanceView';
 import { DevToolsMenu } from './components/DevToolsMenu';
 import { DevToolsDock } from './components/DevToolsDock';
 import { ToastContainer } from './components/ToastContainer';
+import { useStorageSync } from './storage/useStorageSync';
 
-export default function App() {
+function AppInner() {
+  useStorageSync();
   return (
-    <BrowserRouter>
+    <>
       <Routes>
         <Route path="/" element={<TemplatesList />} />
         <Route path="/templates/new" element={<Builder />} />
@@ -22,6 +24,14 @@ export default function App() {
       <DevToolsMenu />
       <DevToolsDock />
       <ToastContainer />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppInner />
     </BrowserRouter>
   );
 }

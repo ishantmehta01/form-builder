@@ -6,27 +6,27 @@ export interface Toast {
   id: string;
   message: string;
   variant: ToastVariant;
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastsState {
   toasts: Toast[];
-  /**
-   * Push a toast onto the stack. Auto-dismisses after `durationMs` (default 2500).
-   * Returns the toast id so callers can manually dismiss earlier if needed.
-   */
-  pushToast: (message: string, variant?: ToastVariant, durationMs?: number) => string;
+  /** Push a toast. Pass durationMs=Infinity for sticky (no auto-dismiss). */
+  pushToast: (message: string, variant?: ToastVariant, durationMs?: number, action?: { label: string; onClick: () => void }) => string;
   dismissToast: (id: string) => void;
 }
 
 export const useToastsStore = create<ToastsState>((set) => ({
   toasts: [],
-  pushToast: (message, variant = 'success', durationMs = 2500) => {
+  pushToast: (message, variant = 'success', durationMs = 2500, action?) => {
     const id = crypto.randomUUID();
-    const toast: Toast = { id, message, variant };
+    const toast: Toast = { id, message, variant, ...(action ? { action } : {}) };
     set((s) => ({ toasts: [...s.toasts, toast] }));
-    setTimeout(() => {
-      set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-    }, durationMs);
+    if (isFinite(durationMs)) {
+      setTimeout(() => {
+        set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+      }, durationMs);
+    }
     return id;
   },
   dismissToast: (id) => {
